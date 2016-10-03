@@ -2,6 +2,22 @@ from __future__ import print_function
 import re
 import sys
 
+class flushfile():
+    """
+    http://stackoverflow.com/a/231216
+    """
+    def __init__(self, f):
+        self.f = f
+
+    def __getattr__(self, name):
+        return object.__getattribute__(self.f, name)
+
+    def write(self, x):
+        self.f.write(x)
+        self.f.flush()
+sys.stderr = flushfile(sys.stderr)
+sys.stdout = flushfile(sys.stdout)
+
 def get_char():
     """
     """
@@ -37,8 +53,7 @@ def get_int():
         if re.search(r"^[+-]?\d+$", s):
             try:
                 i = int(s, 10)
-                if (sys.version_info.major == 3
-                    or (sys.version_info.major == 2 and type(i) is int)):
+                if type(i) is int: # could become long in Python 2
                     return i
             except ValueError:
                 pass
