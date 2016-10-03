@@ -9,7 +9,7 @@ Requires [Docker Engine](https://docs.docker.com/engine/installation/).
     make bash
     make deb # builds .deb
 
-# Installation
+## Installation
 
 1. Download the latest release per https://github.com/cs50/lib50-python/releases
 1. Extract `lib50-python-*`
