@@ -24,8 +24,7 @@ def get_float():
             try:
                 return float(s)
             except ValueError:
-                if s == ".":
-                    return 0.0
+                pass
         print("Retry: ", end="")
 
 def get_int():
