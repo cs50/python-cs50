@@ -32,5 +32,6 @@ Requires [Docker Engine](https://docs.docker.com/engine/installation/).
 
 * Add comments.
 * Decide whether to allow `.` as input for `get_float`.
+* Conditionally install for Python 2 and/or Python 3.
 * Add targets for `pacman`, `rpm`.
 * Add tests.
