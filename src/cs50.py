@@ -3,7 +3,8 @@ import re
 import sys
 
 class flushfile():
-    """
+    """Disable buffering for standard output and standard error.
+
     http://stackoverflow.com/a/231216
     """
     def __init__(self, f):
@@ -19,8 +20,7 @@ sys.stderr = flushfile(sys.stderr)
 sys.stdout = flushfile(sys.stdout)
 
 def get_char():
-    """
-    """
+    """Read a line of text from standard input and return the equivalent char."""
     while True:
         s = get_string()
         if s is None:
@@ -30,8 +30,7 @@ def get_char():
         print("Retry: ", end="")
 
 def get_float():
-    """
-    """
+    """Read a line of text from standard input and return the equivalent float."""
     while True:
         s = get_string()
         if s is None:
@@ -44,8 +43,7 @@ def get_float():
         print("Retry: ", end="")
 
 def get_int():
-    """
-    """
+    """Read a line of text from standard input and return the equivalent int."""
     while True:
         s = get_string();
         if s is None:
@@ -61,8 +59,7 @@ def get_int():
 
 if sys.version_info.major != 3:
     def get_long():
-        """
-        """
+        """Read a line of text from standard input and return the equivalent long."""
         while True:
             s = get_string();
             if s is None:
@@ -75,9 +72,6 @@ if sys.version_info.major != 3:
             print("Retry: ", end="")
 
 def get_string():
-    """
-    """
+    """Read a line of text from standard input and return it as a string."""
     s = sys.stdin.readline()
-    if len(s) == 0:
-        return None
     return s.rstrip("\r\n")
