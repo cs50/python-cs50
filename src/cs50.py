@@ -74,4 +74,4 @@ if sys.version_info.major != 3:
 def get_string():
     """Read a line of text from standard input and return it as a string."""
     s = sys.stdin.readline()
-    return s.rstrip("\r\n")
+    return re.sub(r"(?:\r|\r\n|\n)$", "", s)
