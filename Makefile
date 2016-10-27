@@ -2,7 +2,7 @@ BUILD_DIR = build
 DESCRIPTION = CS50 Library for Python
 MAINTAINER = CS50 <sysadmins@cs50.harvard.edu>
 NAME = lib50-python
-VERSION = 1.2.1
+VERSION = 1.2.2
 
 .PHONY: bash
 bash:
@@ -30,6 +30,7 @@ deb: build
 	-t deb \
 	-v "$(VERSION)" \
 	--after-install after-install.sh \
+	--before-install before-install.sh \
 	--deb-no-default-config-files \
 	--depends python \
 	--depends python3 \
