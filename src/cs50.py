@@ -3,7 +3,8 @@ import re
 import sys
 
 class flushfile():
-    """Disable buffering for standard output and standard error.
+    """
+    Disable buffering for standard output and standard error.
 
     http://stackoverflow.com/a/231216
     """
