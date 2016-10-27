@@ -2,7 +2,7 @@ BUILD_DIR = build
 DESCRIPTION = CS50 Library for Python
 MAINTAINER = CS50 <sysadmins@cs50.harvard.edu>
 NAME = lib50-python
-VERSION = 1.2.2
+VERSION = 1.2.3
 
 .PHONY: bash
 bash:
