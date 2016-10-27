@@ -2,7 +2,7 @@ BUILD_DIR = build
 DESCRIPTION = CS50 Library for Python
 MAINTAINER = CS50 <sysadmins@cs50.harvard.edu>
 NAME = lib50-python
-VERSION = 1.2.0
+VERSION = 1.2.1
 
 .PHONY: bash
 bash:
@@ -14,8 +14,6 @@ build: clean
 	cp src/* "$(BUILD_DIR)"/usr/lib/python2.7/dist-packages/cs50
 	mkdir -p "$(BUILD_DIR)"/usr/lib/python3/dist-packages/cs50
 	cp src/* "$(BUILD_DIR)"/usr/lib/python3/dist-packages/cs50
-	find "$(BUILD_DIR)" -type d -exec chmod 0755 {} +
-	find "$(BUILD_DIR)" -type f -exec chmod 0644 {} +
 
 .PHONY: clean
 clean:
