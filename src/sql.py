@@ -1,5 +1,4 @@
 import sqlalchemy
-from pprint import pprint
 
 class SQL(object):
     """TODO"""
