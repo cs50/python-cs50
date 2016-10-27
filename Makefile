@@ -29,6 +29,7 @@ deb: build
 	-s dir \
 	-t deb \
 	-v "$(VERSION)" \
+	--after-install after-install.sh \
 	--deb-no-default-config-files \
 	--depends python \
 	--depends python3 \
