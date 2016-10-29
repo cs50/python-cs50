@@ -34,6 +34,9 @@ class SQL(object):
             else:
                 return result.rowcount
 
+        except sqlalchemy.exc.IntegrityError:
+            return None
+
         except Exception as e:
             raise RuntimeError(e)
 
