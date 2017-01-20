@@ -11,9 +11,9 @@ Requires [Docker Engine](https://docs.docker.com/engine/installation/).
 
 ## Installation
 
-1. Download the latest release per https://github.com/cs50/lib50-python/releases
-1. Extract `lib50-python-*`
-1. `cd lib50-python-*`
+1. Download the latest release per https://github.com/cs50/python-cs50/releases
+1. Extract `python-cs50-*`
+1. `cd python-cs50-*`
 1. `make install`
 
 ## Usage
@@ -30,6 +30,7 @@ Requires [Docker Engine](https://docs.docker.com/engine/installation/).
 
 ## TODO
 
+* Add install target to Makefile.
 * Add comments.
 * Conditionally install for Python 2 and/or Python 3.
 * Add targets for `pacman`, `rpm`.
