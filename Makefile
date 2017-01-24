@@ -1,9 +1,12 @@
-BUILD_DIR = build
-DESCRIPTION = CS50 Library for Python
-MAINTAINER = CS50 <sysadmins@cs50.harvard.edu>
-NAME = python-cs50
-OLD_NAME = lib50-python
-VERSION = 1.2.4
+BUILD_DIR := build
+LIB_DIR := $(BUILD_DIR)/usr/lib
+PYTHON2_DIR := $(LIB_DIR)/python2.7/dist-packages/cs50
+PYTHON3_DIR := $(LIB_DIR)/python3/dist-packages/cs50
+DESCRIPTION := CS50 Library for Python
+MAINTAINER := CS50 <sysadmins@cs50.harvard.edu>
+NAME := python-cs50
+OLD_NAME := lib50-python
+VERSION := 1.2.4
 
 .PHONY: bash
 bash:
@@ -11,10 +14,9 @@ bash:
 
 .PHONY: build
 build: clean
-	mkdir -p "$(BUILD_DIR)"/usr/lib/python2.7/dist-packages/cs50
-	cp src/* "$(BUILD_DIR)"/usr/lib/python2.7/dist-packages/cs50
-	mkdir -p "$(BUILD_DIR)"/usr/lib/python3/dist-packages/cs50
-	cp src/* "$(BUILD_DIR)"/usr/lib/python3/dist-packages/cs50
+	mkdir -p "$(PYTHON2_DIR)" "$(PYTHON3_DIR)"
+	find "$(PYTHON2_DIR)" "$(PYTHON3_DIR)" -maxdepth 0 -exec cp src/* {} \;
+	chmod -R a+rX "$(PYTHON2_DIR)" "$(PYTHON3_DIR)"
 
 .PHONY: clean
 clean:
