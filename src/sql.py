@@ -39,7 +39,7 @@ class SQL(object):
             elif result.lastrowid is not None:
                 return result.lastrowid
 
-            # if DELETE or UPDATE, return number of rows matched
+            # if DELETE or UPDATE (or INSERT without RETURNING), return number of rows matched
             else:
                 return result.rowcount
 
