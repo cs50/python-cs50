@@ -31,7 +31,6 @@ Requires [Docker Engine](https://docs.docker.com/engine/installation/).
 ## TODO
 
 * Add install target to Makefile.
-* Add comments.
 * Conditionally install for Python 2 and/or Python 3.
 * Add targets for `pacman`, `rpm`.
 * Add tests.
