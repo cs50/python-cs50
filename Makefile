@@ -3,7 +3,7 @@ DESCRIPTION = CS50 Library for Python
 MAINTAINER = CS50 <sysadmins@cs50.harvard.edu>
 NAME = python-cs50
 OLD_NAME = lib50-python
-VERSION = 1.2.4
+VERSION = 1.3.0
 
 .PHONY: bash
 bash:
