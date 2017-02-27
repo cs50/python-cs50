@@ -1,0 +1,18 @@
+language: python
+
+python: "3.4"
+
+# build sdist
+script: make build
+
+# install twine for uploading to PyPI
+before_deploy: pip install twine
+
+deploy:
+  provider: script
+
+  # upload to PyPI
+  script: twine upload -u $PYPI_USERNAME -p $PYPI_PASSWORD dist/*
+
+  # avoid stashing sdist
+  skip_cleanup: true
