@@ -9,10 +9,36 @@ script: make build
 before_deploy: pip install twine
 
 deploy:
-  provider: script
 
-  # upload to PyPI
-  script: twine upload -u $PYPI_USERNAME -p $PYPI_PASSWORD dist/*
+  # create github release
+  - provider: releases
 
-  # avoid stashing sdist
-  skip_cleanup: true
+    # GitHub access token
+    api_key:
+      secure: "Hv2ICkPkC7hiRw8GS9adkEcfoYGeVPbGHRNPQdGxLTeP1Mz9x/2ylUprrb2Ohq+pHGRa1W55nSJAZWHto4L/seWS17vN1JB1o71KYeD8h4Ywm/iJzYJFu4v8cmuT9qMPC89GtSGUkEZml+Vd6lb6d/eBr7HWoAMF7LCobzVvpJftgSBqkN1Z0aaunGNRtPVaqf0D4iQMSU1e0X9HFyIsxjS68sNqVcU/eSqbkHQ32COliOdEZXDqNmoJjIq4NYVH7DCS4kSpfxSd3BkJPn1UH4891MntflMllH7khmSA0lqSuunp+olfzhzchYb0/e0LavqYyFU/cRemyt8RBuE0GD3J3TMudVav/5HLKt6/exZwqfv7bHyorDXkkKGJqYNPUCOD2K4RS4ExpUU5c5en5inJZdgKYVI9gZS15oXmKV3H/8JkJPgx0xRP1Rx8niQKezKdFb0dZxArbMBUuAnolgyoq2EgnsNYhboRWXoJP36FCWFn8U8UNUfmgOkkMcP59mZ6svznxWPIyCMhfGgShY03GTvPp94P6c6OZJpjyjmWyPsvGZJrvnRlJ8VxBaUBcfuQl9rtBorwJ3VI1VWguyBaSINM6OWPtEJ0J2oVM/8Dvjuw2qPNkCdUhflc7wV/AUYB9/6rfpjY+GwTEKtZBBw4epbZX/B0L+vdRONZJ0Q="
+
+    # enable wildcards in filenames
+    file_glob: true
+
+    # upload sdist
+    file: dist/*
+
+    # avoid stashing sdist
+    skip_cleanup: true
+
+    # create releases on tags only
+    on:
+      tags: true
+
+  # deploy to PyPI
+  - provider: script
+
+    # upload sdist to PyPI
+    script: twine upload -u $PYPI_USERNAME -p $PYPI_PASSWORD dist/*
+
+    # avoid stashing sdist
+    skip_cleanup: true
+
+    # deploy on tags only
+    on:
+      tags: true
