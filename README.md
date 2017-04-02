@@ -1,5 +1,7 @@
 # CS50 Library for Python
 
+[![Build Status](https://travis-ci.org/cs50/python-cs50.svg?branch=master)](https://travis-ci.org/cs50/python-cs50)
+
 Supports Python 2 and Python 3.
 
 ## Development
