@@ -20,20 +20,23 @@ class flushfile():
 sys.stderr = flushfile(sys.stderr)
 sys.stdout = flushfile(sys.stdout)
 
-def get_char():
+def get_char(prompt=None):
     """Read a line of text from standard input and return the equivalent char."""
     while True:
-        s = get_string()
+        s = get_string(prompt)
         if s is None:
             return None
         if len(s) == 1:
             return s[0]
-        print("Retry: ", end="")
 
-def get_float():
+        # temporarily here for backwards compatibility
+        if prompt is None:
+            print("Retry: ", end="")
+
+def get_float(prompt=None):
     """Read a line of text from standard input and return the equivalent float."""
     while True:
-        s = get_string()
+        s = get_string(prompt)
         if s is None:
             return None
         if len(s) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", s):
@@ -41,12 +44,15 @@ def get_float():
                 return float(s)
             except ValueError:
                 pass
-        print("Retry: ", end="")
 
-def get_int():
+        # temporarily here for backwards compatibility
+        if prompt is None:
+            print("Retry: ", end="")
+
+def get_int(prompt=None):
     """Read a line of text from standard input and return the equivalent int."""
     while True:
-        s = get_string();
+        s = get_string(prompt);
         if s is None:
             return None
         if re.search(r"^[+-]?\d+$", s):
@@ -56,13 +62,16 @@ def get_int():
                     return i
             except ValueError:
                 pass
-        print("Retry: ", end="")
+
+        # temporarily here for backwards compatibility
+        if prompt is None:
+            print("Retry: ", end="")
 
 if sys.version_info.major != 3:
-    def get_long():
+    def get_long(prompt=None):
         """Read a line of text from standard input and return the equivalent long."""
         while True:
-            s = get_string();
+            s = get_string(prompt)
             if s is None:
                 return None
             if re.search(r"^[+-]?\d+$", s):
@@ -70,11 +79,16 @@ if sys.version_info.major != 3:
                     return long(s, 10)
                 except ValueError:
                     pass
-            print("Retry: ", end="")
 
-def get_string():
+            # temporarily here for backwards compatibility
+            if prompt is None:
+                print("Retry: ", end="")
+
+def get_string(prompt=None):
     """Read a line of text from standard input and return it as a string."""
     try:
+        if prompt is not None:
+            print(prompt, end="")
         s = sys.stdin.readline()
         return re.sub(r"(?:\r|\r\n|\n)$", "", s)
     except ValueError:
