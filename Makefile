@@ -9,14 +9,3 @@ clean:
 .PHONY: install
 install: build
 	pip install dist/*.tar.gz
-
-.PHONY: push
-push:
-	git push origin "v$$(python setup.py --version)"
-
-.PHONY: release
-release: tag push
-
-.PHONY: tag
-tag:
-	git tag "v$$(python setup.py --version)"

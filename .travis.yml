@@ -11,24 +11,10 @@ before_deploy: pip install twine
 deploy:
 
   # create github release
-  - provider: releases
-
-    # GitHub access token
-    api_key:
-      secure: "pwBn1lky58GHp1qR4i0oSZyOJkGMTvRzt0EfESVtl2ZbRTVUE7UFQbk/cL1002zMOUkJ4c5IjRCg95NJZWUvOSHwt4cOyqDVzi/S6AqACOlOhfnkw3S6oLGgRT3IlXK2ng0Viiqc1+BlVdwwXURKyobirqFgr4MAlb5kh75WmV9Xs4GwIS+qPq9luv38Bls2US/mNt5KRV1DiePr2ZSCqFESFfoIz+QKhZtVdynEF4jJwevEwP4HrCoT3guIJlXcWhOG37n+e8S4YLwg+k3yYeQTmR/QMgjmQLwEBZ6v9bNjqXM3CMtn3KUryDzcp5Z5+Vv1p1uoDbmuK+Ll5nQttAp/gARk+IWZ/xWc8MuQpFvjRzafbtPiF7ZlqaYh1wCREuZTWDAk/UJgQxb81v0jo0iAPyk9HMfgK2CJuU8wDwraKZ5dKk4y45Zww1gSSzpJJ8xSrylKPn7Wnft617Lnc+O0X6DnIAFtHDAPu/lPFaaokn1TN9AOPXoxb2cEeh+oDcUQD4zZG6Ukvh9+Hw8XiFBG+jEm6ekCvawTjnlZmBIw8YPJKEjrZv8LWfKhnVebRbmehawmnrZxUALCp39EjrcsIltYw4gefbd/Z9kIr8r3yVZfuq7U6vd8PBuCiDZHlKM1Lz4Ns24WK96nYe6V9Lt3WUERh6xt8JtuFrNHBiQ="
-
-    # enable wildcards in filenames
-    file_glob: true
-
-    # upload sdist
-    file: dist/*
-
-    # avoid stashing sdist
-    skip_cleanup: true
-
-    # create releases on tags only
+  - provider: script
+    script: 'curl --fail --data "{ \"tag_name\": \"v$(python setup.py --version)\", \"target_commitish\": \"$TRAVIS_COMMIT\", \"name\": \"v$(python setup.py --version)\" }" --user bot50:$GITHUB_TOKEN https://api.github.com/repos/$TRAVIS_REPO_SLUG/releases'
     on:
-      tags: true
+      branch: master
 
   # deploy to PyPI
   - provider: script
@@ -39,6 +25,6 @@ deploy:
     # avoid stashing sdist
     skip_cleanup: true
 
-    # deploy on tags only
+    # deploy on commits to master
     on:
-      tags: true
+      branch: master
