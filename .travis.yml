@@ -2,6 +2,10 @@ language: python
 
 python: "3.4"
 
+# don't build tags
+branches:
+  except: /^v\d/
+
 # build sdist
 script: make build
 
