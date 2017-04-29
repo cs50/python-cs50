@@ -23,8 +23,8 @@ sys.stdout = flushfile(sys.stdout)
 
 def eprint(*objects, end="\n", sep=" "):
     """
-    Print an error message to standard error, prefixing it with caller's
-    file name and line number.
+    Print an error message to standard error, prefixing it with
+    file name and line number from which method was called.
     """
     (frame, filename, lineno, function, code_context, index) = inspect.stack()[1]
     print("{}:{}: ".format(filename, lineno), end="")
