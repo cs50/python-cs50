@@ -1,4 +1,5 @@
 from __future__ import print_function
+import inspect
 import re
 import sys
 
@@ -19,6 +20,15 @@ class flushfile():
         self.f.flush()
 sys.stderr = flushfile(sys.stderr)
 sys.stdout = flushfile(sys.stdout)
+
+def eprint(*objects, end="\n", sep=" "):
+    """
+    Print an error message to standard error, prefixing it with caller's
+    file name and line number.
+    """
+    (frame, filename, lineno, function, code_context, index) = inspect.stack()[1]
+    print("{}:{}: ".format(filename, lineno), end="")
+    print(*objects, end=end, file=sys.stderr, sep=sep)
 
 def get_char():
     """Read a line of text from standard input and return the equivalent char."""
