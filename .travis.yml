@@ -2,8 +2,8 @@ language: python
 python: '3.4'
 branches:
   except: "/^v\\d/"
-script: make build
-before_deploy: pip install twine
+install: true
+script: true
 deploy:
 - provider: script
   script: 'curl --fail --data "{ \"tag_name\": \"v$(python setup.py --version)\",
@@ -11,9 +11,9 @@ deploy:
     }" --user bot50:$GITHUB_TOKEN https://api.github.com/repos/$TRAVIS_REPO_SLUG/releases'
   on:
     branch: master
-- provider: script
-  script: twine upload -u $PYPI_USERNAME -p $PYPI_PASSWORD dist/*
-  skip_cleanup: true
+- provider: pypi
+  user: "$PYPI_USERNAME"
+  password: "$PYPI_PASSWORD"
   on:
     branch: master
 notifications:
