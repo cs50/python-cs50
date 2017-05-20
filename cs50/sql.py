@@ -1,4 +1,6 @@
+import re
 import sqlalchemy
+import sqlparse
 
 class SQL(object):
     """Wrap SQLAlchemy to provide a simple SQL API."""
@@ -20,7 +22,44 @@ class SQL(object):
         """
         Execute a SQL statement.
         """
+
+        # parse text
+        parsed = sqlparse.parse(text)
+        if len(parsed) == 0:
+            raise RuntimeError("missing statement")
+        elif len(parsed) > 1:
+            raise RuntimeError("too many statements")
+        statement = parsed[0]
+        if statement.get_type() == "UNKNOWN":
+            raise RuntimeError("unknown type of statement")
+
+        # infer paramstyle
+	# https://www.python.org/dev/peps/pep-0249/#paramstyle
+	paramstyle = None
+	for token in statement.flatten():
+	    if sqlparse.utils.imt(token.ttype, t=sqlparse.tokens.Token.Name.Placeholder):
+		_paramstyle = None
+		if re.search(r"^\?$", token.value):
+		    _paramstyle = "qmark"
+		elif re.search(r"^:\d+$", token.value):
+		    _paramstyle = "numeric"
+		elif re.search(r"^:\w+$", token.value):
+		    _paramstyle = "named"
+		elif re.search(r"^%s$", token.value):
+		    _paramstyle = "format"
+		elif re.search(r"^%\(\w+\)s$", token.value):
+		    _paramstyle = "pyformat"
+		else:
+		    raise RuntimeError("unknown paramstyle")
+		if paramstyle and paramstyle != _paramstyle:
+		    raise RuntimeError("inconsistent paramstyle")
+		paramstyle = _paramstyle
+
         try:
+
+            parsed = sqlparse.split("SELECT * FROM cs50 WHERE id IN (SELECT id FROM cs50); SELECT 1; CREATE TABLE foo")
+            print(parsed)
+            return 0
 
             # bind parameters before statement reaches database, so that bound parameters appear in exceptions
             # http://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.text
