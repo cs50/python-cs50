@@ -32,20 +32,31 @@ def eprint(*args, **kwargs):
     print("{}:{}: ".format(filename, lineno), end="")
     print(*args, end=end, file=sys.stderr, sep=sep)
 
-def get_char():
-    """Read a line of text from standard input and return the equivalent char."""
+def get_char(prompt=None):
+    """
+    Read a line of text from standard input and return the equivalent char;
+    if text is not a single char, user is prompted to retry. If line can't
+    be read, return None.
+    """
     while True:
-        s = get_string()
+        s = get_string(prompt)
         if s is None:
             return None
         if len(s) == 1:
             return s[0]
-        print("Retry: ", end="")
 
-def get_float():
-    """Read a line of text from standard input and return the equivalent float."""
+        # temporarily here for backwards compatibility
+        if prompt is None:
+            print("Retry: ", end="")
+
+def get_float(prompt=None):
+    """
+    Read a line of text from standard input and return the equivalent float
+    as precisely as possible; if text does not represent a double, user is
+    prompted to retry. If line can't be read, return None.
+    """
     while True:
-        s = get_string()
+        s = get_string(prompt)
         if s is None:
             return None
         if len(s) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", s):
@@ -53,12 +64,19 @@ def get_float():
                 return float(s)
             except ValueError:
                 pass
-        print("Retry: ", end="")
 
-def get_int():
-    """Read a line of text from standard input and return the equivalent int."""
+        # temporarily here for backwards compatibility
+        if prompt is None:
+            print("Retry: ", end="")
+
+def get_int(prompt=None):
+    """
+    Read a line of text from standard input and return the equivalent int;
+    if text does not represent an int, user is prompted to retry. If line
+    can't be read, return None.
+    """
     while True:
-        s = get_string();
+        s = get_string(prompt);
         if s is None:
             return None
         if re.search(r"^[+-]?\d+$", s):
@@ -68,13 +86,20 @@ def get_int():
                     return i
             except ValueError:
                 pass
-        print("Retry: ", end="")
+
+        # temporarily here for backwards compatibility
+        if prompt is None:
+            print("Retry: ", end="")
 
 if sys.version_info.major != 3:
-    def get_long():
-        """Read a line of text from standard input and return the equivalent long."""
+    def get_long(prompt=None):
+        """
+        Read a line of text from standard input and return the equivalent long;
+        if text does not represent a long, user is prompted to retry. If line
+        can't be read, return None.
+        """
         while True:
-            s = get_string();
+            s = get_string(prompt)
             if s is None:
                 return None
             if re.search(r"^[+-]?\d+$", s):
@@ -82,12 +107,24 @@ if sys.version_info.major != 3:
                     return long(s, 10)
                 except ValueError:
                     pass
-            print("Retry: ", end="")
 
-def get_string():
-    """Read a line of text from standard input and return it as a string."""
+            # temporarily here for backwards compatibility
+            if prompt is None:
+                print("Retry: ", end="")
+
+def get_string(prompt=None):
+    """
+    Read a line of text from standard input and return it as a string,
+    sans trailing line ending. Supports CR (\r), LF (\n), and CRLF (\r\n)
+    as line endings. If user inputs only a line ending, returns "", not None.
+    Returns None upon error or no input whatsoever (i.e., just EOF).
+    """
     try:
+        if prompt is not None:
+            print(prompt, end="")
         s = sys.stdin.readline()
+        if not s:
+            return None
         return re.sub(r"(?:\r|\r\n|\n)$", "", s)
     except ValueError:
         return None

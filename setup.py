@@ -15,5 +15,5 @@ setup(
     name="cs50",
     packages=["cs50"],
     url="https://github.com/cs50/python-cs50",
-    version="1.3.0"
+    version="2.1.0"
 )
