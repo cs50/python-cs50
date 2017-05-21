@@ -21,14 +21,16 @@ class flushfile():
 sys.stderr = flushfile(sys.stderr)
 sys.stdout = flushfile(sys.stdout)
 
-def eprint(*objects, end="\n", sep=" "):
+def eprint(*args, **kwargs):
     """
     Print an error message to standard error, prefixing it with
     file name and line number from which method was called.
     """
-    (frame, filename, lineno, function, code_context, index) = inspect.stack()[1]
+    end = kwargs.get("end", "\n")
+    sep = kwargs.get("sep", " ")
+    (filename, lineno) = inspect.stack()[1][1:3]
     print("{}:{}: ".format(filename, lineno), end="")
-    print(*objects, end=end, file=sys.stderr, sep=sep)
+    print(*args, end=end, file=sys.stderr, sep=sep)
 
 def get_char():
     """Read a line of text from standard input and return the equivalent char."""
