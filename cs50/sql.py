@@ -1,22 +1,25 @@
 import datetime
+import re
 import sqlalchemy
 import sys
+import warnings
 
 class SQL(object):
     """Wrap SQLAlchemy to provide a simple SQL API."""
 
-    def __init__(self, url):
+    def __init__(self, url, **kwargs):
         """
         Create instance of sqlalchemy.engine.Engine.
 
         URL should be a string that indicates database dialect and connection arguments.
 
         http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
+        http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
         try:
-            self.engine = sqlalchemy.create_engine(url)
+            self.engine = sqlalchemy.create_engine(url, **kwargs)
         except Exception as e:
-            e.__context__ = None
+            e.__cause__ = None
             raise RuntimeError(e)
 
     def execute(self, text, **params):
@@ -79,6 +82,10 @@ class SQL(object):
                 else:
                     return process(value)
 
+        # raise exceptions for warnings
+        warnings.filterwarnings("error")
+
+        # prepare, execute statement
         try:
 
             # construct a new TextClause clause
@@ -97,29 +104,37 @@ class SQL(object):
 
             # stringify bound parameters
             # http://docs.sqlalchemy.org/en/latest/faq/sqlexpressions.html#how-do-i-render-sql-expressions-as-strings-possibly-with-bound-parameters-inlined
-            self.statement = str(statement.compile(compile_kwargs={"literal_binds": True}))
+            statement = str(statement.compile(compile_kwargs={"literal_binds": True}))
 
             # execute statement
-            result = self.engine.execute(self.statement)
+            result = self.engine.execute(statement)
 
             # if SELECT (or INSERT with RETURNING), return result set as list of dict objects
-            if result.returns_rows:
+            if re.search(r"^\s*SELECT\s+", statement, re.I):
                 rows = result.fetchall()
                 return [dict(row) for row in rows]
 
             # if INSERT, return primary key value for a newly inserted row
-            elif result.lastrowid is not None:
-                return result.lastrowid
+            elif re.search(r"^\s*INSERT\s+", statement, re.I):
+                if self.engine.url.get_backend_name() == "postgresql":
+                    result = self.engine.execute(sqlalchemy.text("SELECT LASTVAL()"))
+                    return result.first()[0]
+                else:
+                    return result.lastrowid
 
-            # if DELETE or UPDATE (or INSERT without RETURNING), return number of rows matched
-            else:
+            # if DELETE or UPDATE, return number of rows matched
+            elif re.search(r"^\s*(?:DELETE|UPDATE)\s+", statement, re.I):
                 return result.rowcount
+
+            # if some other statement, return True unless exception
+            return True
 
         # if constraint violated, return None
         except sqlalchemy.exc.IntegrityError:
             return None
 
-        # else raise error
+        # else raise exception
         except Exception as e:
-            e.__context__ = None
-            raise RuntimeError(e)
+            _e = RuntimeError(e) # else Python 3 prints warnings' tracebacks
+            _e.__cause__ = None
+            raise _e
