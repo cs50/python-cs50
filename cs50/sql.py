@@ -1,4 +1,5 @@
 import datetime
+import logging
 import re
 import sqlalchemy
 import sys
@@ -16,6 +17,8 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
+        logging.basicConfig(level=logging.DEBUG)
+        self.logger = logging.getLogger(__name__)
         try:
             self.engine = sqlalchemy.create_engine(url, **kwargs)
         except Exception as e:
@@ -108,6 +111,9 @@ class SQL(object):
 
             # execute statement
             result = self.engine.execute(statement)
+
+            # log statement
+            self.logger.debug(statement)
 
             # if SELECT (or INSERT with RETURNING), return result set as list of dict objects
             if re.search(r"^\s*SELECT\s+", statement, re.I):
