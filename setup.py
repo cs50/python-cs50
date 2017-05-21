@@ -10,7 +10,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"
     ],
     description="CS50 library for Python",
-    install_requires=["SQLAlchemy", "sqlparse"],
+    install_requires=["SQLAlchemy"],
     keywords="cs50",
     name="cs50",
     packages=["cs50"],
