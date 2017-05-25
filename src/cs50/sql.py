@@ -18,8 +18,12 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
+
+        # log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
+
+        # create engine, raising exception if back end's module not installed
         self.engine = sqlalchemy.create_engine(url, **kwargs)
 
     def execute(self, text, **params):
