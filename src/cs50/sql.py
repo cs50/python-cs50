@@ -1,4 +1,5 @@
 import datetime
+import importlib
 import logging
 import re
 import sqlalchemy
@@ -17,13 +18,13 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
+
+        # log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
-        try:
-            self.engine = sqlalchemy.create_engine(url, **kwargs)
-        except Exception as e:
-            e.__cause__ = None
-            raise RuntimeError(e)
+
+        # create engine, raising exception if back end's module not installed
+        self.engine = sqlalchemy.create_engine(url, **kwargs)
 
     def execute(self, text, **params):
         """
@@ -138,9 +139,3 @@ class SQL(object):
         # if constraint violated, return None
         except sqlalchemy.exc.IntegrityError:
             return None
-
-        # else raise exception
-        except Exception as e:
-            _e = RuntimeError(e) # else Python 3 prints warnings' tracebacks
-            _e.__cause__ = None
-            raise _e
