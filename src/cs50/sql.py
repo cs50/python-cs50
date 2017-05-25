@@ -1,4 +1,5 @@
 import datetime
+import importlib
 import logging
 import re
 import sqlalchemy
@@ -22,8 +23,9 @@ class SQL(object):
         try:
             self.engine = sqlalchemy.create_engine(url, **kwargs)
         except Exception as e:
-            e.__cause__ = None
-            raise RuntimeError(e)
+            e_ = RuntimeError(e) # else Python 3 prints warnings' tracebacks
+            e_.__cause__ = None
+            raise e_
 
     def execute(self, text, **params):
         """
@@ -141,6 +143,6 @@ class SQL(object):
 
         # else raise exception
         except Exception as e:
-            _e = RuntimeError(e) # else Python 3 prints warnings' tracebacks
-            _e.__cause__ = None
-            raise _e
+            e_ = RuntimeError(e) # else Python 3 prints warnings' tracebacks
+            e_.__cause__ = None
+            raise e_
