@@ -20,11 +20,7 @@ class SQL(object):
         """
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger(__name__)
-        try:
-            self.engine = sqlalchemy.create_engine(url, **kwargs)
-        except Exception as e:
-            e.__cause__ = None # else Python 3 prints warnings' tracebacks
-            raise e
+        self.engine = sqlalchemy.create_engine(url, **kwargs)
 
     def execute(self, text, **params):
         """
@@ -139,8 +135,3 @@ class SQL(object):
         # if constraint violated, return None
         except sqlalchemy.exc.IntegrityError:
             return None
-
-        # else raise exception
-        except Exception as e:
-            e.__cause__ = None # else Python 3 prints warnings' tracebacks
-            raise e
