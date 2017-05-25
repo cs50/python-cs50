@@ -23,9 +23,8 @@ class SQL(object):
         try:
             self.engine = sqlalchemy.create_engine(url, **kwargs)
         except Exception as e:
-            e_ = RuntimeError(e) # else Python 3 prints warnings' tracebacks
-            e_.__cause__ = None
-            raise e_
+            e.__cause__ = None # else Python 3 prints warnings' tracebacks
+            raise e
 
     def execute(self, text, **params):
         """
@@ -143,6 +142,5 @@ class SQL(object):
 
         # else raise exception
         except Exception as e:
-            e_ = RuntimeError(e) # else Python 3 prints warnings' tracebacks
-            e_.__cause__ = None
-            raise e_
+            e.__cause__ = None # else Python 3 prints warnings' tracebacks
+            raise e
