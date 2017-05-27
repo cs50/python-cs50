@@ -1,3 +1,4 @@
+import sys
 import unittest
 from cs50.sql import SQL
 
@@ -126,4 +127,4 @@ if __name__ == "__main__":
         unittest.TestLoader().loadTestsFromTestCase(PostgresTests)
     ])
 
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())
