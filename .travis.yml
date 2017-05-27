@@ -15,18 +15,23 @@ before_script:
 - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
 - psql -c 'create database test;' -U postgres
 script: python tests/sqltests.py
-deploy:
-- provider: script
-  script: 'curl --fail --data "{ \"tag_name\": \"v$(python setup.py --version)\",
-    \"target_commitish\": \"$TRAVIS_COMMIT\", \"name\": \"v$(python setup.py --version)\"
-    }" --user bot50:$GITHUB_TOKEN https://api.github.com/repos/$TRAVIS_REPO_SLUG/releases'
-  on:
-    branch: master
-- provider: pypi
-  user: "$PYPI_USERNAME"
-  password: "$PYPI_PASSWORD"
-  on:
-    branch: master
+jobs:
+  include:
+  - stage: deploy
+    python: '3.4'
+    script: skip
+    deploy:
+    - provider: script
+      script: 'curl --fail --data "{ \"tag_name\": \"v$(python setup.py --version)\",
+        \"target_commitish\": \"$TRAVIS_COMMIT\", \"name\": \"v$(python setup.py --version)\"
+      }" --user bot50:$GITHUB_TOKEN https://api.github.com/repos/$TRAVIS_REPO_SLUG/releases'
+      on:
+        branch: master
+    - provider: pypi
+      user: "$PYPI_USERNAME"
+      password: "$PYPI_PASSWORD"
+      on:
+        branch: master
 notifications:
   slack:
     secure: lJklhcBVjDT6KzUNa3RFHXdXSeH7ytuuGrkZ5ZcR72CXMoTf2pMJTzPwRLWOp6lCSdDC9Y8MWLrcg/e33dJga4Jlp9alOmWqeqesaFjfee4st8vAsgNbv8/RajPH1gD2bnkt8oIwUzdHItdb5AucKFYjbH2g0d8ndoqYqUeBLrnsT1AP5G/Vi9OHC9OWNpR0FKaZIJE0Wt52vkPMH3sV2mFeIskByPB+56U5y547mualKxn61IVR/dhYBEtZQJuSvnwKHPOn9Pkk7cCa+SSSeTJ4w5LboY8T17otaYNauXo46i1bKIoGiBcCcrJyQHHiPQmcq/YU540MC5Wzt9YXUycmJzRi347oyQeDee27wV3XJlWMXuuhbtJiKCFny7BTQ160VATlj/dbwIzN99Ra6/BtTumv/6LyTdKIuVjdAkcN8dtdDW1nlrQ29zuPNCcXXzJ7zX7kQaOCUV1c2OrsbiH/0fE9nknUORn97txqhlYVi0QMS7764wFo6kg0vpmFQRkkQySsJl+TmgcZ01AlsJc2EMMWVuaj9Af9JU4/4yalqDiXIh1fOYYUZnLfOfWS+MsnI+/oLfqJFyMbrsQQTIjs+kTzbiEdhd2R4EZgusU/xRFWokS2NAvahexrRhRQ6tpAI+LezPrkNOR3aHiykBf+P9BkUa0wPp6V2Ayc6q0=
