@@ -74,7 +74,7 @@ class SQLTests(unittest.TestCase):
 class MySQLTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("mysql://root@localhost/cs50_sql_tests")
+        self.db = SQL("mysql://root@localhost/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), PRIMARY KEY (id))")
@@ -95,7 +95,7 @@ class MySQLTests(SQLTests):
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("postgresql://postgres@localhost/cs50_sql_tests")
+        self.db = SQL("postgresql://postgres@localhost/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16))")
@@ -114,7 +114,7 @@ class PostgresTests(SQLTests):
 class SQLiteTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("sqlite:///cs50_sql_tests.db")
+        self.db = SQL("sqlite:///test.db")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
