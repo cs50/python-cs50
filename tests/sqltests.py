@@ -72,14 +72,6 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("UPDATE cs50 SET val = 'foo' WHERE id > 1"), 2)
         self.assertEqual(self.db.execute("UPDATE cs50 SET val = 'foo' WHERE id = -50"), 0)
 
-class MySQLTests(SQLTests):
-    @classmethod
-    def setUpClass(self):
-        self.db = SQL("mysql://root@localhost/test")
-
-    def setUp(self):
-        self.db.execute("CREATE TABLE cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), PRIMARY KEY (id))")
-
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
 
@@ -92,6 +84,14 @@ class MySQLTests(SQLTests):
             if not str(e).startswith("(1051"):
                 raise e
 
+class MySQLTests(SQLTests):
+    @classmethod
+    def setUpClass(self):
+        self.db = SQL("mysql://root@localhost/test")
+
+    def setUp(self):
+        self.db.execute("CREATE TABLE cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), PRIMARY KEY (id))")
+
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
@@ -100,17 +100,6 @@ class PostgresTests(SQLTests):
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16))")
 
-    def tearDown(self):
-        self.db.execute("DROP TABLE cs50")
-
-    @classmethod
-    def tearDownClass(self):
-        self.db.execute("DROP TABLE IF EXISTS cs50")
-
-    def test_insert_returns_last_row_id(self):
-        self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('foo')"), 1)
-        self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
-
 class SQLiteTests(SQLTests):
     @classmethod
     def setUpClass(self):
@@ -118,13 +107,6 @@ class SQLiteTests(SQLTests):
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
-
-    def tearDown(self):
-        self.db.execute("DROP TABLE cs50")
-
-    @classmethod
-    def tearDownClass(self):
-        self.db.execute("DROP TABLE IF EXISTS cs50")
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
