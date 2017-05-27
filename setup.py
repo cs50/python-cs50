@@ -13,7 +13,8 @@ setup(
     install_requires=["SQLAlchemy"],
     keywords="cs50",
     name="cs50",
+    package_dir={"": "src"},
     packages=["cs50"],
     url="https://github.com/cs50/python-cs50",
-    version="1.3.0"
+    version="2.0.0"
 )
