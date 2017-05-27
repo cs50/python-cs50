@@ -19,6 +19,8 @@ jobs:
   include:
   - stage: deploy
     python: '3.4'
+    install: skip
+    before_script: skip
     script: skip
     deploy:
     - provider: script
