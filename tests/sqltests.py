@@ -95,7 +95,7 @@ class MySQLTests(SQLTests):
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("postgresql://postgres:postgres@localhost/cs50_sql_tests")
+        self.db = SQL("postgresql://postgres@localhost/cs50_sql_tests")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16))")
