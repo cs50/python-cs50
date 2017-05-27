@@ -1,6 +1,7 @@
 import sys
 import unittest
 from cs50.sql import SQL
+import warnings
 
 class SQLTests(unittest.TestCase):
     def test_delete_returns_affected_rows(self):
@@ -86,10 +87,9 @@ class MySQLTests(SQLTests):
     def tearDownClass(self):
         try:
             self.db.execute("DROP TABLE IF EXISTS cs50")
-        except RuntimeError as e:
-
+        except Warning as e:
             # suppress "unknown table"
-            if not str(e).startswith("(1051L"):
+            if not str(e).startswith("(1051"):
                 raise e
 
 class PostgresTests(SQLTests):
