@@ -1,9 +1,12 @@
+from cs50.sql import SQL
 import sys
 import unittest
-from cs50.sql import SQL
 import warnings
 
 class SQLTests(unittest.TestCase):
+    def multi_inserts_enabled(self):
+        return True
+
     def test_delete_returns_affected_rows(self):
         rows = [
             {"id": 1, "val": "foo"},
@@ -24,6 +27,8 @@ class SQLTests(unittest.TestCase):
     def test_insert_returns_last_row_id(self):
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('foo')"), 1)
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
+        if self.multi_inserts_enabled():
+            self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')"), 4)
 
     def test_select_all(self):
         self.assertEqual(self.db.execute("SELECT * FROM cs50"), [])
@@ -107,6 +112,9 @@ class SQLiteTests(SQLTests):
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
+
+    def multi_inserts_enabled(self):
+        return False
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
