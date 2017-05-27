@@ -1,7 +1,12 @@
-import unittest
 from cs50.sql import SQL
+import sys
+import unittest
+import warnings
 
 class SQLTests(unittest.TestCase):
+    def multi_inserts_enabled(self):
+        return True
+
     def test_delete_returns_affected_rows(self):
         rows = [
             {"id": 1, "val": "foo"},
@@ -22,6 +27,8 @@ class SQLTests(unittest.TestCase):
     def test_insert_returns_last_row_id(self):
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('foo')"), 1)
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
+        if self.multi_inserts_enabled():
+            self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')"), 4)
 
     def test_select_all(self):
         self.assertEqual(self.db.execute("SELECT * FROM cs50"), [])
@@ -70,54 +77,44 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("UPDATE cs50 SET val = 'foo' WHERE id > 1"), 2)
         self.assertEqual(self.db.execute("UPDATE cs50 SET val = 'foo' WHERE id = -50"), 0)
 
+    def tearDown(self):
+        self.db.execute("DROP TABLE cs50")
+
+    @classmethod
+    def tearDownClass(self):
+        try:
+            self.db.execute("DROP TABLE IF EXISTS cs50")
+        except Warning as e:
+            # suppress "unknown table"
+            if not str(e).startswith("(1051"):
+                raise e
+
 class MySQLTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("mysql://root@localhost/cs50_sql_tests")
+        self.db = SQL("mysql://root@localhost/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), PRIMARY KEY (id))")
 
-    def tearDown(self):
-        self.db.execute("DROP TABLE cs50")
-
-    @classmethod
-    def tearDownClass(self):
-        self.db.execute("DROP TABLE IF EXISTS cs50")
-
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("postgresql://postgres:postgres@localhost/cs50_sql_tests")
+        self.db = SQL("postgresql://postgres@localhost/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16))")
 
-    def tearDown(self):
-        self.db.execute("DROP TABLE cs50")
-
-    @classmethod
-    def tearDownClass(self):
-        self.db.execute("DROP TABLE IF EXISTS cs50")
-
-    def test_insert_returns_last_row_id(self):
-        self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('foo')"), 1)
-        self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
-
 class SQLiteTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("sqlite:///cs50_sql_tests.db")
+        self.db = SQL("sqlite:///test.db")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
 
-    def tearDown(self):
-        self.db.execute("DROP TABLE cs50")
-
-    @classmethod
-    def tearDownClass(self):
-        self.db.execute("DROP TABLE IF EXISTS cs50")
+    def multi_inserts_enabled(self):
+        return False
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
@@ -126,4 +123,4 @@ if __name__ == "__main__":
         unittest.TestLoader().loadTestsFromTestCase(PostgresTests)
     ])
 
-    unittest.TextTestRunner(verbosity=2).run(suite)
+    sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())
