@@ -84,7 +84,13 @@ class MySQLTests(SQLTests):
 
     @classmethod
     def tearDownClass(self):
-        self.db.execute("DROP TABLE IF EXISTS cs50")
+        try:
+            self.db.execute("DROP TABLE IF EXISTS cs50")
+        except RuntimeError as e:
+
+            # suppress "unknown table"
+            if not str(e).startswith("(1051L"):
+                raise e
 
 class PostgresTests(SQLTests):
     @classmethod
