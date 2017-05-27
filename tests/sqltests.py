@@ -1,7 +1,9 @@
-from cs50.sql import SQL
+import logging
 import sys
 import unittest
 import warnings
+
+from cs50.sql import SQL
 
 class SQLTests(unittest.TestCase):
     def multi_inserts_enabled(self):
@@ -15,11 +17,6 @@ class SQLTests(unittest.TestCase):
         ]
         for row in rows:
             self.db.execute("INSERT INTO cs50(val) VALUES(:val);", val=row["val"])
-
-        print(self.db.execute("DELETE FROM cs50 WHERE id = :id", id=rows[0]["id"]))
-        print(self.db.execute("SELECT * FROM cs50"))
-        return
-
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = :id", id=rows[0]["id"]), 1)
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = :a or id = :b", a=rows[1]["id"], b=rows[2]["id"]), 2)
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = -50"), 0)
@@ -122,5 +119,5 @@ if __name__ == "__main__":
         unittest.TestLoader().loadTestsFromTestCase(MySQLTests),
         unittest.TestLoader().loadTestsFromTestCase(PostgresTests)
     ])
-
+    logging.getLogger("cs50.sql").disabled = True
     sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())
