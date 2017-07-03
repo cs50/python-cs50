@@ -10,11 +10,11 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"
     ],
     description="CS50 library for Python",
-    install_requires=["SQLAlchemy"],
+    install_requires=["SQLAlchemy", "sqlparse"],
     keywords="cs50",
     name="cs50",
     package_dir={"": "src"},
     packages=["cs50"],
     url="https://github.com/cs50/python-cs50",
-    version="2.0.0"
+    version="2.1.0"
 )

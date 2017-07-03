@@ -6,8 +6,9 @@ import warnings
 from cs50.sql import SQL
 
 class SQLTests(unittest.TestCase):
-    def multi_inserts_enabled(self):
-        return True
+
+    def test_multiple_statements(self):
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')")
 
     def test_delete_returns_affected_rows(self):
         rows = [
@@ -24,8 +25,6 @@ class SQLTests(unittest.TestCase):
     def test_insert_returns_last_row_id(self):
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('foo')"), 1)
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
-        if self.multi_inserts_enabled():
-            self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')"), 4)
 
     def test_select_all(self):
         self.assertEqual(self.db.execute("SELECT * FROM cs50"), [])

@@ -3,6 +3,7 @@ import importlib
 import logging
 import re
 import sqlalchemy
+import sqlparse
 import sys
 import warnings
 
@@ -85,6 +86,10 @@ class SQL(object):
                     return ", ".join([process(v) for v in value])
                 else:
                     return process(value)
+
+        # allow only one statement at a time
+        if len(sqlparse.split(text)) > 1:
+            raise RuntimeError("too many statements at once")
 
         # raise exceptions for warnings
         warnings.filterwarnings("error")
