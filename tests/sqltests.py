@@ -1,11 +1,14 @@
-from cs50.sql import SQL
+import logging
 import sys
 import unittest
 import warnings
 
+from cs50.sql import SQL
+
 class SQLTests(unittest.TestCase):
-    def multi_inserts_enabled(self):
-        return True
+
+    def test_multiple_statements(self):
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')")
 
     def test_delete_returns_affected_rows(self):
         rows = [
@@ -15,11 +18,6 @@ class SQLTests(unittest.TestCase):
         ]
         for row in rows:
             self.db.execute("INSERT INTO cs50(val) VALUES(:val);", val=row["val"])
-
-        print(self.db.execute("DELETE FROM cs50 WHERE id = :id", id=rows[0]["id"]))
-        print(self.db.execute("SELECT * FROM cs50"))
-        return
-
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = :id", id=rows[0]["id"]), 1)
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = :a or id = :b", a=rows[1]["id"], b=rows[2]["id"]), 2)
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = -50"), 0)
@@ -27,8 +25,6 @@ class SQLTests(unittest.TestCase):
     def test_insert_returns_last_row_id(self):
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('foo')"), 1)
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
-        if self.multi_inserts_enabled():
-            self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')"), 4)
 
     def test_select_all(self):
         self.assertEqual(self.db.execute("SELECT * FROM cs50"), [])
@@ -122,5 +118,5 @@ if __name__ == "__main__":
         unittest.TestLoader().loadTestsFromTestCase(MySQLTests),
         unittest.TestLoader().loadTestsFromTestCase(PostgresTests)
     ])
-
+    logging.getLogger("cs50.sql").disabled = True
     sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())

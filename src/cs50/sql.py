@@ -3,6 +3,7 @@ import importlib
 import logging
 import re
 import sqlalchemy
+import sqlparse
 import sys
 import warnings
 
@@ -86,6 +87,10 @@ class SQL(object):
                 else:
                     return process(value)
 
+        # allow only one statement at a time
+        if len(sqlparse.split(text)) > 1:
+            raise RuntimeError("too many statements at once")
+
         # raise exceptions for warnings
         warnings.filterwarnings("error")
 
@@ -123,7 +128,7 @@ class SQL(object):
 
             # if INSERT, return primary key value for a newly inserted row
             elif re.search(r"^\s*INSERT\s+", statement, re.I):
-                if self.engine.url.get_backend_name() == "postgresql":
+                if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
                     result = self.engine.execute(sqlalchemy.text("SELECT LASTVAL()"))
                     return result.first()[0]
                 else:
