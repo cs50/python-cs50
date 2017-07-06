@@ -123,7 +123,7 @@ class SQL(object):
 
             # if INSERT, return primary key value for a newly inserted row
             elif re.search(r"^\s*INSERT\s+", statement, re.I):
-                if self.engine.url.get_backend_name() == "postgresql":
+                if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
                     result = self.engine.execute(sqlalchemy.text("SELECT LASTVAL()"))
                     return result.first()[0]
                 else:
