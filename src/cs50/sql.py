@@ -1,4 +1,5 @@
 import datetime
+import decimal
 import importlib
 import logging
 import re
@@ -31,7 +32,6 @@ class SQL(object):
         """
         Execute a SQL statement.
         """
-
         class UserDefinedType(sqlalchemy.TypeDecorator):
             """
             Add support for expandable values, a la https://bitbucket.org/zzzeek/sqlalchemy/issues/3953/expanding-parameter.
@@ -123,8 +123,14 @@ class SQL(object):
 
             # if SELECT (or INSERT with RETURNING), return result set as list of dict objects
             if re.search(r"^\s*SELECT", statement, re.I):
-                rows = result.fetchall()
-                return [dict(row) for row in rows]
+
+                # coerce any decimal.Decimal objects to float objects
+                rows = [dict(row) for row in result.fetchall()]
+                for row in rows:
+                    for column in row:
+                        if isinstance(row[column], decimal.Decimal):
+                            row[column] = float(row[column])
+                return rows
 
             # if INSERT, return primary key value for a newly inserted row
             elif re.search(r"^\s*INSERT", statement, re.I):
