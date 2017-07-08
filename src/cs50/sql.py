@@ -125,6 +125,7 @@ class SQL(object):
             if re.search(r"^\s*SELECT", statement, re.I):
 
                 # coerce any decimal.Decimal objects to float objects
+                # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
                 rows = [dict(row) for row in result.fetchall()]
                 for row in rows:
                     for column in row:
