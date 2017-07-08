@@ -122,12 +122,12 @@ class SQL(object):
             self.logger.debug(statement)
 
             # if SELECT (or INSERT with RETURNING), return result set as list of dict objects
-            if re.search(r"^\s*SELECT\s+", statement, re.I):
+            if re.search(r"^\s*SELECT", statement, re.I):
                 rows = result.fetchall()
                 return [dict(row) for row in rows]
 
             # if INSERT, return primary key value for a newly inserted row
-            elif re.search(r"^\s*INSERT\s+", statement, re.I):
+            elif re.search(r"^\s*INSERT", statement, re.I):
                 if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
                     result = self.engine.execute(sqlalchemy.text("SELECT LASTVAL()"))
                     return result.first()[0]
@@ -135,7 +135,7 @@ class SQL(object):
                     return result.lastrowid
 
             # if DELETE or UPDATE, return number of rows matched
-            elif re.search(r"^\s*(?:DELETE|UPDATE)\s+", statement, re.I):
+            elif re.search(r"^\s*(?:DELETE|UPDATE)", statement, re.I):
                 return result.rowcount
 
             # if some other statement, return True unless exception
