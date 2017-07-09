@@ -3,6 +3,8 @@ import sys
 import unittest
 import warnings
 
+sys.path.insert(0, "../src")
+
 from cs50.sql import SQL
 
 class SQLTests(unittest.TestCase):
