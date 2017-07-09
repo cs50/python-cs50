@@ -117,7 +117,8 @@ def get_string(prompt=None):
     Read a line of text from standard input and return it as a string,
     sans trailing line ending. Supports CR (\r), LF (\n), and CRLF (\r\n)
     as line endings. If user inputs only a line ending, returns "", not None.
-    Returns None upon error or no input whatsoever (i.e., just EOF).
+    Returns None upon error or no input whatsoever (i.e., just EOF). Exits
+    from Python altogether on SIGINT.
     """
     try:
         if prompt is not None:
@@ -126,5 +127,7 @@ def get_string(prompt=None):
         if not s:
             return None
         return re.sub(r"(?:\r|\r\n|\n)$", "", s)
+    except KeyboardInterrupt:
+        sys.exit("")
     except ValueError:
         return None
