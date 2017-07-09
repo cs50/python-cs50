@@ -22,7 +22,10 @@ pip install cs50
     l = cs50.get_long(); # Python 2 only
     s = cs50.get_string();
 
+# References
+
+- https://github.com/ronsavage/SQL/blob/master/sql-92.bnf#L19-L72
+
 ## TODO
-* Conditionally install for Python 2 and/or Python 3.
 * Add targets for `pacman`, `rpm`.
 * Add tests.
