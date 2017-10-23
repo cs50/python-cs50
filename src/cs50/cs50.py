@@ -3,6 +3,7 @@ import inspect
 import re
 import sys
 
+
 class flushfile():
     """
     Disable buffering for standard output and standard error.
@@ -18,8 +19,11 @@ class flushfile():
     def write(self, x):
         self.f.write(x)
         self.f.flush()
+
+
 sys.stderr = flushfile(sys.stderr)
 sys.stdout = flushfile(sys.stdout)
+
 
 def eprint(*args, **kwargs):
     """
@@ -32,22 +36,6 @@ def eprint(*args, **kwargs):
     print("{}:{}: ".format(filename, lineno), end="")
     print(*args, end=end, file=sys.stderr, sep=sep)
 
-def get_char(prompt=None):
-    """
-    Read a line of text from standard input and return the equivalent char;
-    if text is not a single char, user is prompted to retry. If line can't
-    be read, return None.
-    """
-    while True:
-        s = get_string(prompt)
-        if s is None:
-            return None
-        if len(s) == 1:
-            return s[0]
-
-        # temporarily here for backwards compatibility
-        if prompt is None:
-            print("Retry: ", end="")
 
 def get_float(prompt=None):
     """
@@ -69,6 +57,7 @@ def get_float(prompt=None):
         if prompt is None:
             print("Retry: ", end="")
 
+
 def get_int(prompt=None):
     """
     Read a line of text from standard input and return the equivalent int;
@@ -82,12 +71,12 @@ def get_int(prompt=None):
         if re.search(r"^[+-]?\d+$", s):
             try:
                 i = int(s, 10)
-                if type(i) is int: # could become long in Python 2
+                if type(i) is int: # Could become long in Python 2
                     return i
             except ValueError:
                 pass
 
-        # temporarily here for backwards compatibility
+        # Temporarily here for backwards compatibility
         if prompt is None:
             print("Retry: ", end="")
 
@@ -108,9 +97,10 @@ if sys.version_info.major != 3:
                 except ValueError:
                     pass
 
-            # temporarily here for backwards compatibility
+            # Temporarily here for backwards compatibility
             if prompt is None:
                 print("Retry: ", end="")
+
 
 def get_string(prompt=None):
     """
