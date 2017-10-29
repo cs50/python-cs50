@@ -6,7 +6,6 @@ import sys
 
 from distutils.sysconfig import get_python_lib
 from os.path import abspath, join
-from site import getusersitepackages
 from termcolor import cprint
 from traceback import extract_tb, format_list, format_exception_only
 
@@ -16,10 +15,9 @@ def excepthook(type, value, tb):
     Format traceback, darkening entries from global site-packages directories
     and user-specific site-packages directory.
 
-    https://stackoverflow.com/a/33042323/5156190
-    https://stackoverflow.com/a/122340/5156190
+    https://stackoverflow.com/a/46071447/5156190
     """
-    packages = tuple(join(abspath(p), "") for p in [get_python_lib(), getusersitepackages()])
+    packages = tuple(join(abspath(p), "") for p in sys.path[1:])
     for entry in extract_tb(tb):
         fmt = format_list((entry,))
         if (entry[0].startswith(packages)):
