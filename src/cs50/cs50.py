@@ -12,7 +12,8 @@ from traceback import extract_tb, format_list, format_exception_only
 
 def excepthook(type, value, tb):
     """
-    Format traceback, darkening entries from global site-packages and user-specific site-packages directory.
+    Format traceback, darkening entries from global site-packages directories
+    and user-specific site-packages directory.
 
     https://stackoverflow.com/a/33042323/5156190
     """
