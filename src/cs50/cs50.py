@@ -20,7 +20,7 @@ def excepthook(type, value, tb):
     packages = tuple(join(abspath(p), "") for p in getsitepackages() + [getusersitepackages()])
     for entry in extract_tb(tb):
         fmt = format_list((entry,))
-        if (entry.filename.startswith(packages)):
+        if (entry[0].startswith(packages)):
             cprint("".join(fmt), attrs=["dark"], end="", file=sys.stderr)
         else:
             cprint("".join(fmt), end="", file=sys.stderr)
