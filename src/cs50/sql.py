@@ -8,6 +8,7 @@ import sqlparse
 import sys
 import warnings
 
+
 class SQL(object):
     """Wrap SQLAlchemy to provide a simple SQL API."""
 
@@ -21,9 +22,9 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
 
-        # log statements to standard error
+        # log statements to standard error, hard-coding name because module is technically cs50.sql
         logging.basicConfig(level=logging.DEBUG)
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("cs50.SQL")
 
         # create engine, raising exception if back end's module not installed
         self.engine = sqlalchemy.create_engine(url, **kwargs)
@@ -36,7 +37,9 @@ class SQL(object):
             """
             Add support for expandable values, a la https://bitbucket.org/zzzeek/sqlalchemy/issues/3953/expanding-parameter.
             """
+
             impl = sqlalchemy.types.UserDefinedType
+
             def process_literal_param(self, value, dialect):
                 """Receive a literal parameter value to be rendered inline within a statement."""
                 def process(value):
@@ -109,7 +112,8 @@ class SQL(object):
 
                 # bind parameters before statement reaches database, so that bound parameters appear in exceptions
                 # http://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.text
-                statement = statement.bindparams(sqlalchemy.bindparam(key, value=value, type_=UserDefinedType()))
+                statement = statement.bindparams(sqlalchemy.bindparam(
+                    key, value=value, type_=UserDefinedType()))
 
             # stringify bound parameters
             # http://docs.sqlalchemy.org/en/latest/faq/sqlexpressions.html#how-do-i-render-sql-expressions-as-strings-possibly-with-bound-parameters-inlined
