@@ -1,10 +1,5 @@
 import sys
 
-from os.path import abspath, join
-from site import getsitepackages, getusersitepackages
-from termcolor import cprint
-from traceback import extract_tb, format_list, format_exception_only
-
 from .cs50 import *
 
 
