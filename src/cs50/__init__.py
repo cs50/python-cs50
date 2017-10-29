@@ -1,4 +1,5 @@
 import sys
+
 from os.path import abspath, join
 from site import getsitepackages, getusersitepackages
 from termcolor import cprint
@@ -30,22 +31,3 @@ class CustomImporter(object):
 
 
 sys.meta_path.append(CustomImporter())
-
-
-def excepthook(type, value, tb):
-    """
-    Format traceback, darkening entries from global site-packages and user-specific site-packages directory.
-
-    https://stackoverflow.com/a/33042323/5156190
-    """
-    packages = tuple(join(abspath(p), "") for p in getsitepackages() + [getusersitepackages()])
-    for entry in extract_tb(tb):
-        fmt = format_list((entry,))
-        if (entry.filename.startswith(packages)):
-            cprint("".join(fmt), attrs=["dark"], end="", file=sys.stderr)
-        else:
-            cprint("".join(fmt), end="", file=sys.stderr)
-    cprint("".join(format_exception_only(type, value)), end="")
-
-
-sys.excepthook = excepthook
