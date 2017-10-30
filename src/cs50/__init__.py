@@ -1,6 +1,12 @@
 import sys
 
-from .cs50 import *
+from .cs50 import eprint, get_char, get_float, get_int, get_string
+try:
+    from .cs50 import get_long
+except:
+    pass
+
+from . import flask
 
 
 class CustomImporter(object):

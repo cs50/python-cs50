@@ -6,28 +6,8 @@ import sys
 
 from distutils.sysconfig import get_python_lib
 from os.path import abspath, join
-from termcolor import cprint
-from traceback import extract_tb, format_list, format_exception_only
-
-
-def excepthook(type, value, tb):
-    """
-    Format traceback, darkening entries from global site-packages directories
-    and user-specific site-packages directory.
-
-    https://stackoverflow.com/a/46071447/5156190
-    """
-    packages = tuple(join(abspath(p), "") for p in sys.path[1:])
-    for entry in extract_tb(tb):
-        fmt = format_list((entry,))
-        if (entry[0].startswith(packages)):
-            cprint("".join(fmt), attrs=["dark"], end="", file=sys.stderr)
-        else:
-            cprint("".join(fmt), end="", file=sys.stderr)
-    cprint("".join(format_exception_only(type, value)), end="")
-
-
-sys.excepthook = excepthook
+from termcolor import colored
+from traceback import extract_tb, format_list, format_exception_only, format_exception
 
 
 class flushfile():
@@ -62,6 +42,31 @@ def eprint(*args, **kwargs):
     (filename, lineno) = inspect.stack()[1][1:3]
     print("{}:{}: ".format(filename, lineno), end="")
     print(*args, end=end, file=sys.stderr, sep=sep)
+
+
+def formatException(type, value, tb):
+    """
+    Format traceback, darkening entries from global site-packages directories
+    and user-specific site-packages directory.
+
+    https://stackoverflow.com/a/46071447/5156190
+    """
+
+    # Absolute paths to site-packages
+    packages = tuple(join(abspath(p), "") for p in sys.path[1:])
+
+    # Darken lines referring to files in site-packages
+    lines = []
+    for line in format_exception(type, value, tb):
+        matches = re.search(r"^  File \"([^\"]+)\", line \d+, in .+", line)
+        if matches and matches.group(1).startswith(packages):
+            lines += colored(line, attrs=["dark"])
+        else:
+            lines += line
+    return "".join(lines).rstrip()
+
+
+sys.excepthook = lambda type, value, tb: print(formatException(type, value, tb), file=sys.stderr)
 
 
 def get_char(prompt=None):
