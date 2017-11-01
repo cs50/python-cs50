@@ -1,7 +1,14 @@
 from __future__ import print_function
+
 import inspect
 import re
 import sys
+
+from distutils.sysconfig import get_python_lib
+from os.path import abspath, join
+from termcolor import colored
+from traceback import extract_tb, format_list, format_exception_only, format_exception
+
 
 class flushfile():
     """
@@ -9,6 +16,7 @@ class flushfile():
 
     http://stackoverflow.com/a/231216
     """
+
     def __init__(self, f):
         self.f = f
 
@@ -18,8 +26,11 @@ class flushfile():
     def write(self, x):
         self.f.write(x)
         self.f.flush()
+
+
 sys.stderr = flushfile(sys.stderr)
 sys.stdout = flushfile(sys.stdout)
+
 
 def eprint(*args, **kwargs):
     """
@@ -31,6 +42,32 @@ def eprint(*args, **kwargs):
     (filename, lineno) = inspect.stack()[1][1:3]
     print("{}:{}: ".format(filename, lineno), end="")
     print(*args, end=end, file=sys.stderr, sep=sep)
+
+
+def formatException(type, value, tb):
+    """
+    Format traceback, darkening entries from global site-packages directories
+    and user-specific site-packages directory.
+
+    https://stackoverflow.com/a/46071447/5156190
+    """
+
+    # Absolute paths to site-packages
+    packages = tuple(join(abspath(p), "") for p in sys.path[1:])
+
+    # Darken lines referring to files in site-packages
+    lines = []
+    for line in format_exception(type, value, tb):
+        matches = re.search(r"^  File \"([^\"]+)\", line \d+, in .+", line)
+        if matches and matches.group(1).startswith(packages):
+            lines += colored(line, attrs=["dark"])
+        else:
+            lines += line
+    return "".join(lines).rstrip()
+
+
+sys.excepthook = lambda type, value, tb: print(formatException(type, value, tb), file=sys.stderr)
+
 
 def get_char(prompt=None):
     """
@@ -48,6 +85,7 @@ def get_char(prompt=None):
         # temporarily here for backwards compatibility
         if prompt is None:
             print("Retry: ", end="")
+
 
 def get_float(prompt=None):
     """
@@ -69,6 +107,7 @@ def get_float(prompt=None):
         if prompt is None:
             print("Retry: ", end="")
 
+
 def get_int(prompt=None):
     """
     Read a line of text from standard input and return the equivalent int;
@@ -76,13 +115,13 @@ def get_int(prompt=None):
     can't be read, return None.
     """
     while True:
-        s = get_string(prompt);
+        s = get_string(prompt)
         if s is None:
             return None
         if re.search(r"^[+-]?\d+$", s):
             try:
                 i = int(s, 10)
-                if type(i) is int: # could become long in Python 2
+                if type(i) is int:  # could become long in Python 2
                     return i
             except ValueError:
                 pass
@@ -90,6 +129,7 @@ def get_int(prompt=None):
         # temporarily here for backwards compatibility
         if prompt is None:
             print("Retry: ", end="")
+
 
 if sys.version_info.major != 3:
     def get_long(prompt=None):
@@ -111,6 +151,7 @@ if sys.version_info.major != 3:
             # temporarily here for backwards compatibility
             if prompt is None:
                 print("Retry: ", end="")
+
 
 def get_string(prompt=None):
     """
