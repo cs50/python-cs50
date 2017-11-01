@@ -22,9 +22,9 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
 
-        # log statements to standard error, hard-coding name because module is technically cs50.sql
+        # log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
-        self.logger = logging.getLogger("cs50.SQL")
+        self.logger = logging.getLogger("cs50")
 
         # create engine, raising exception if back end's module not installed
         self.engine = sqlalchemy.create_engine(url, **kwargs)
