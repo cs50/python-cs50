@@ -55,14 +55,15 @@ def formatException(type, value, tb):
     # Absolute paths to site-packages
     packages = tuple(join(abspath(p), "") for p in sys.path[1:])
 
-    # Darken lines referring to files in site-packages
+    # Highlight lines not referring to files in site-packages
     lines = []
     for line in format_exception(type, value, tb):
         matches = re.search(r"^  File \"([^\"]+)\", line \d+, in .+", line)
         if matches and matches.group(1).startswith(packages):
-            lines += colored(line, attrs=["dark"])
-        else:
             lines += line
+        else:
+            matches = re.search(r"^(\s*)(.*?)(\s*)$", line, re.DOTALL)
+            lines.append(matches.group(1) + colored(matches.group(2), "yellow") + matches.group(3))
     return "".join(lines).rstrip()
 
 
