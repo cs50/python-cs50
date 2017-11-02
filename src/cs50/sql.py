@@ -24,7 +24,6 @@ class SQL(object):
 
         # log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
-        self.logger = logging.getLogger("cs50")
 
         # create engine, raising exception if back end's module not installed
         self.engine = sqlalchemy.create_engine(url, **kwargs)
@@ -123,7 +122,7 @@ class SQL(object):
             result = self.engine.execute(statement)
 
             # log statement
-            self.logger.debug(statement)
+            logging.getLogger("cs50").debug(re.sub(r"\n\s*", " ", sqlparse.format(statement, reindent=True)))
 
             # if SELECT (or INSERT with RETURNING), return result set as list of dict objects
             if re.search(r"^\s*SELECT", statement, re.I):
