@@ -123,7 +123,7 @@ class SQL(object):
             result = self.engine.execute(statement)
 
             # log statement
-            self.logger.debug(statement)
+            self.logger.debug(re.sub(r"\n\s*", " ", sqlparse.format(statement, reindent=True)))
 
             # if SELECT (or INSERT with RETURNING), return result set as list of dict objects
             if re.search(r"^\s*SELECT", statement, re.I):
