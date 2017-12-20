@@ -1,11 +1,20 @@
+import os
 import sys
 
+# Save student's sys.path
+path = sys.path[:]
+
+# In case student has files that shadow packages
+sys.path = [p for p in sys.path if p not in ("", os.getcwd())]
+
+# Import cs50_*
 from .cs50 import eprint, get_char, get_float, get_int, get_string
 try:
     from .cs50 import get_long
 except:
     pass
 
+# Monkey patches
 from . import flask
 
 
@@ -32,3 +41,7 @@ class CustomImporter(object):
 
 
 sys.meta_path.append(CustomImporter())
+
+
+# Restore student's sys.path
+sys.path = path
