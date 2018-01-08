@@ -192,7 +192,8 @@ class SQL(object):
                 ret = result.rowcount
 
             # If some other statement, return True unless exception
-            ret = True
+            else:
+                ret = True
 
         # If constraint violated, return None
         except sqlalchemy.exc.IntegrityError:
