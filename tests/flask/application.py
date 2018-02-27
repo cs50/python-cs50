@@ -1,5 +1,8 @@
 import requests
+import sys
 from flask import Flask, render_template
+
+sys.path.insert(0, "../../src")
 
 import cs50
 

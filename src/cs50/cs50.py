@@ -83,7 +83,7 @@ def get_char(prompt=None):
         if len(s) == 1:
             return s[0]
 
-        # temporarily here for backwards compatibility
+        # Temporarily here for backwards compatibility
         if prompt is None:
             print("Retry: ", end="")
 
@@ -104,7 +104,7 @@ def get_float(prompt=None):
             except ValueError:
                 pass
 
-        # temporarily here for backwards compatibility
+        # Temporarily here for backwards compatibility
         if prompt is None:
             print("Retry: ", end="")
 
@@ -122,12 +122,12 @@ def get_int(prompt=None):
         if re.search(r"^[+-]?\d+$", s):
             try:
                 i = int(s, 10)
-                if type(i) is int:  # could become long in Python 2
+                if type(i) is int:  # Could become long in Python 2
                     return i
             except ValueError:
                 pass
 
-        # temporarily here for backwards compatibility
+        # Temporarily here for backwards compatibility
         if prompt is None:
             print("Retry: ", end="")
 
@@ -149,7 +149,7 @@ if sys.version_info.major != 3:
                 except ValueError:
                     pass
 
-            # temporarily here for backwards compatibility
+            # Temporarily here for backwards compatibility
             if prompt is None:
                 print("Retry: ", end="")
 
