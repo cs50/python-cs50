@@ -2,10 +2,12 @@ import datetime
 import decimal
 import importlib
 import logging
+import os
 import re
 import sqlalchemy
 import sqlparse
 import sys
+import termcolor
 import warnings
 
 
@@ -22,12 +24,52 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
 
-        # log statements to standard error
+        # Require that file already exist for SQLite
+        matches = re.search(r"^sqlite:///(.+)$", url)
+        if matches:
+            if not os.path.exists(matches.group(1)):
+                raise RuntimeError("does not exist: {}".format(matches.group(1)))
+            if not os.path.isfile(matches.group(1)):
+                raise RuntimeError("not a file: {}".format(matches.group(1)))
+
+        # Create engine, raising exception if back end's module not installed
+        self.engine = sqlalchemy.create_engine(url, **kwargs)
+
+        # Log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger("cs50")
 
-        # create engine, raising exception if back end's module not installed
-        self.engine = sqlalchemy.create_engine(url, **kwargs)
+        # Test database
+        try:
+            self.logger.disabled = True
+            self.execute("SELECT 1")
+        except sqlalchemy.exc.OperationalError as e:
+            e = RuntimeError(self._parse(e))
+            e.__cause__ = None
+            raise e
+        else:
+            self.logger.disabled = False
+
+    def _parse(self, e):
+        """Parses an exception, returns its message."""
+
+        # MySQL
+        matches = re.search(r"^\(_mysql_exceptions\.OperationalError\) \(\d+, \"(.+)\"\)$", str(e))
+        if matches:
+            return matches.group(1)
+
+        # PostgreSQL
+        matches = re.search(r"^\(psycopg2\.OperationalError\) (.+)$", str(e))
+        if matches:
+            return matches.group(1)
+
+        # SQLite
+        matches = re.search(r"^\(sqlite3\.OperationalError\) (.+)$", str(e))
+        if matches:
+            return matches.group(1)
+
+        # Default
+        return str(e)
 
     def execute(self, text, **params):
         """
@@ -81,77 +123,91 @@ class SQL(object):
                     elif isinstance(value, sqlalchemy.sql.elements.Null):
                         return sqlalchemy.types.NullType().literal_processor(dialect)(value)
 
-                    # unsupported value
+                    # Unsupported value
                     raise RuntimeError("unsupported value")
 
-                # process value(s), separating with commas as needed
+                # Process value(s), separating with commas as needed
                 if type(value) is list:
                     return ", ".join([process(v) for v in value])
                 else:
                     return process(value)
 
-        # allow only one statement at a time
+        # Allow only one statement at a time
         if len(sqlparse.split(text)) > 1:
             raise RuntimeError("too many statements at once")
 
-        # raise exceptions for warnings
+        # Raise exceptions for warnings
         warnings.filterwarnings("error")
 
-        # prepare, execute statement
+        # Prepare, execute statement
         try:
 
-            # construct a new TextClause clause
+            # Construct a new TextClause clause
             statement = sqlalchemy.text(text)
 
-            # iterate over parameters
+            # Iterate over parameters
             for key, value in params.items():
 
-                # translate None to NULL
+                # Translate None to NULL
                 if value is None:
                     value = sqlalchemy.sql.null()
 
-                # bind parameters before statement reaches database, so that bound parameters appear in exceptions
+                # Bind parameters before statement reaches database, so that bound parameters appear in exceptions
                 # http://docs.sqlalchemy.org/en/latest/core/sqlelement.html#sqlalchemy.sql.expression.text
                 statement = statement.bindparams(sqlalchemy.bindparam(
                     key, value=value, type_=UserDefinedType()))
 
-            # stringify bound parameters
+            # Stringify bound parameters
             # http://docs.sqlalchemy.org/en/latest/faq/sqlexpressions.html#how-do-i-render-sql-expressions-as-strings-possibly-with-bound-parameters-inlined
             statement = str(statement.compile(compile_kwargs={"literal_binds": True}))
 
-            # execute statement
+            # Statement for logging
+            log = re.sub(r"\n\s*", " ", sqlparse.format(statement, reindent=True))
+
+            # Execute statement
             result = self.engine.execute(statement)
 
-            # log statement
-            self.logger.debug(re.sub(r"\n\s*", " ", sqlparse.format(statement, reindent=True)))
-
-            # if SELECT (or INSERT with RETURNING), return result set as list of dict objects
+            # If SELECT (or INSERT with RETURNING), return result set as list of dict objects
             if re.search(r"^\s*SELECT", statement, re.I):
 
-                # coerce any decimal.Decimal objects to float objects
+                # Coerce any decimal.Decimal objects to float objects
                 # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
                 rows = [dict(row) for row in result.fetchall()]
                 for row in rows:
                     for column in row:
                         if isinstance(row[column], decimal.Decimal):
                             row[column] = float(row[column])
-                return rows
+                ret = rows
 
-            # if INSERT, return primary key value for a newly inserted row
+            # If INSERT, return primary key value for a newly inserted row
             elif re.search(r"^\s*INSERT", statement, re.I):
                 if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
                     result = self.engine.execute(sqlalchemy.text("SELECT LASTVAL()"))
-                    return result.first()[0]
+                    ret = result.first()[0]
                 else:
-                    return result.lastrowid
+                    ret = result.lastrowid
 
-            # if DELETE or UPDATE, return number of rows matched
+            # If DELETE or UPDATE, return number of rows matched
             elif re.search(r"^\s*(?:DELETE|UPDATE)", statement, re.I):
-                return result.rowcount
+                ret = result.rowcount
 
-            # if some other statement, return True unless exception
-            return True
+            # If some other statement, return True unless exception
+            else:
+                ret = True
 
-        # if constraint violated, return None
+        # If constraint violated, return None
         except sqlalchemy.exc.IntegrityError:
+            self.logger.debug(termcolor.colored(log, "yellow"))
             return None
+
+        # If user errror
+        except sqlalchemy.exc.OperationalError as e:
+            self.logger.debug(termcolor.colored(log, "red"))
+            e = RuntimeError(self._parse(e))
+            e.__cause__ = None
+            raise e
+
+        # Return value
+        else:
+            self.logger.debug(termcolor.colored(log, "green"))
+            return ret

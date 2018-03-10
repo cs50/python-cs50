@@ -10,11 +10,13 @@ services:
 install:
 - python setup.py install
 - pip install mysqlclient
-- pip install psycopg2
+- pip install psycopg2-binary
 before_script:
 - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
 - psql -c 'create database test;' -U postgres
+- touch test.db
 script: python tests/sql.py
+after_script: rm -f test.db
 jobs:
   include:
   - stage: deploy
