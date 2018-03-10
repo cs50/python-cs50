@@ -59,7 +59,7 @@ class SQL(object):
             return matches.group(1)
 
         # PostgreSQL
-        matches = re.search(r"^\((psycopg2\.OperationalError)\) (.+)$", str(e))
+        matches = re.search(r"^\(psycopg2\.OperationalError\) (.+)$", str(e))
         if matches:
             return matches.group(1)
 
