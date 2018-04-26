@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import sqlalchemy
+import sqlite3
 import sqlparse
 import sys
 import termcolor
@@ -31,6 +32,22 @@ class SQL(object):
                 raise RuntimeError("does not exist: {}".format(matches.group(1)))
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
+
+            # Optionally enable foreign key constraints
+            # http://docs.sqlalchemy.org/en/latest/dialects/sqlite.html#foreign-key-support
+            if kwargs.pop("pragma_foreign_keys", False):
+                @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
+                def _set_sqlite_pragma(dbapi_connection, connection_record):
+                    """Enables foreign key support."""
+
+                    # Ensure backend is sqlite
+                    if type(dbapi_connection) is sqlite3.Connection:
+                        cursor = dbapi_connection.cursor()
+
+                        # Respect foreign key constraints by default
+                        cursor.execute("PRAGMA foreign_keys=ON")
+                        cursor.close()
+
 
         # Create engine, raising exception if back end's module not installed
         self.engine = sqlalchemy.create_engine(url, **kwargs)
