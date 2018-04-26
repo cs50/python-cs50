@@ -107,12 +107,19 @@ class SQLiteTests(SQLTests):
     @classmethod
     def setUpClass(self):
         self.db = SQL("sqlite:///test.db")
+        self.db1 = SQL("sqlite:///test1.db", pragma_foreign_keys=True)
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
 
-    def multi_inserts_enabled(self):
-        return False
+    def test_foreign_key_support(self):
+        self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
+        self.db.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
+        self.assertEqual(self.db.execute("INSERT INTO bar VALUES(50)"), 1)
+
+        self.db1.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
+        self.db1.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
+        self.assertEqual(self.db1.execute("INSERT INTO bar VALUES(50)"), None)
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
@@ -120,5 +127,6 @@ if __name__ == "__main__":
         unittest.TestLoader().loadTestsFromTestCase(MySQLTests),
         unittest.TestLoader().loadTestsFromTestCase(PostgresTests)
     ])
-    logging.getLogger("cs50.sql").disabled = True
+
+    logging.getLogger("cs50").disabled = True
     sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())

@@ -33,24 +33,18 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-            # Optionally enable foreign key constraints
-            # http://docs.sqlalchemy.org/en/latest/dialects/sqlite.html#foreign-key-support
-            if kwargs.pop("pragma_foreign_keys", False):
-                @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
-                def _set_sqlite_pragma(dbapi_connection, connection_record):
-                    """Enables foreign key support."""
+            pragma_foreign_keys = kwargs.pop("pragma_foreign_keys", False)
 
-                    # Ensure backend is sqlite
-                    if type(dbapi_connection) is sqlite3.Connection:
-                        cursor = dbapi_connection.cursor()
+            # Create engine, raising exception if back end's module not installed
+            self.engine = sqlalchemy.create_engine(url, **kwargs)
 
-                        # Respect foreign key constraints by default
-                        cursor.execute("PRAGMA foreign_keys=ON")
-                        cursor.close()
+            # Whether to enable foreign key constraints
+            if pragma_foreign_keys:
+                sqlalchemy.event.listen(self.engine, "connect", _on_connect)
+        else:
+            # Create engine, raising exception if back end's module not installed
+            self.engine = sqlalchemy.create_engine(url, **kwargs)
 
-
-        # Create engine, raising exception if back end's module not installed
-        self.engine = sqlalchemy.create_engine(url, **kwargs)
 
         # Log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
@@ -229,3 +223,16 @@ class SQL(object):
         else:
             self.logger.debug(termcolor.colored(log, "green"))
             return ret
+
+
+# http://docs.sqlalchemy.org/en/latest/dialects/sqlite.html#foreign-key-support
+def _on_connect(dbapi_connection, connection_record):
+    """Enables foreign key support."""
+
+    # Ensure backend is sqlite
+    if type(dbapi_connection) is sqlite3.Connection:
+        cursor = dbapi_connection.cursor()
+
+        # Respect foreign key constraints by default
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
