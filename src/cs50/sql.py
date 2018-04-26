@@ -146,6 +146,8 @@ class SQL(object):
                     return process(value)
 
         # Allow only one statement at a time
+        # SQLite does not support executing many statements
+        # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
         if len(sqlparse.split(text)) > 1:
             raise RuntimeError("too many statements at once")
 
