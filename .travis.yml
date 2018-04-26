@@ -14,7 +14,7 @@ install:
 before_script:
 - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
 - psql -c 'create database test;' -U postgres
-- touch test.db
+- touch test.db test1.db
 script: python tests/sql.py
 after_script: rm -f test.db
 jobs:

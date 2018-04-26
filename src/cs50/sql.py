@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import sqlalchemy
+import sqlite3
 import sqlparse
 import sys
 import termcolor
@@ -32,12 +33,25 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-        # Create engine, raising exception if back end's module not installed
-        self.engine = sqlalchemy.create_engine(url, **kwargs)
+            # Remember foreign_keys and remove it from kwargs
+            foreign_keys = kwargs.pop("foreign_keys", False)
+
+            # Create engine, raising exception if back end's module not installed
+            self.engine = sqlalchemy.create_engine(url, **kwargs)
+
+            # Enable foreign key constraints
+            if foreign_keys:
+                sqlalchemy.event.listen(self.engine, "connect", _connect)
+        else:
+
+            # Create engine, raising exception if back end's module not installed
+            self.engine = sqlalchemy.create_engine(url, **kwargs)
+
 
         # Log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger("cs50")
+        disabled = self.logger.disabled
 
         # Test database
         try:
@@ -48,7 +62,7 @@ class SQL(object):
             e.__cause__ = None
             raise e
         else:
-            self.logger.disabled = False
+            self.logger.disabled = disabled
 
     def _parse(self, e):
         """Parses an exception, returns its message."""
@@ -133,6 +147,8 @@ class SQL(object):
                     return process(value)
 
         # Allow only one statement at a time
+        # SQLite does not support executing many statements
+        # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
         if len(sqlparse.split(text)) > 1:
             raise RuntimeError("too many statements at once")
 
@@ -211,3 +227,16 @@ class SQL(object):
         else:
             self.logger.debug(termcolor.colored(log, "green"))
             return ret
+
+
+# http://docs.sqlalchemy.org/en/latest/dialects/sqlite.html#foreign-key-support
+def _connect(dbapi_connection, connection_record):
+    """Enables foreign key support."""
+
+    # Ensure backend is sqlite
+    if type(dbapi_connection) is sqlite3.Connection:
+        cursor = dbapi_connection.cursor()
+
+        # Respect foreign key constraints by default
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
