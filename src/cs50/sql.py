@@ -55,6 +55,7 @@ class SQL(object):
         # Log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
         self.logger = logging.getLogger("cs50")
+        disabled = self.logger.disabled
 
         # Test database
         try:
@@ -65,7 +66,7 @@ class SQL(object):
             e.__cause__ = None
             raise e
         else:
-            self.logger.disabled = False
+            self.logger.disabled = disabled
 
     def _parse(self, e):
         """Parses an exception, returns its message."""
