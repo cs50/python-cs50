@@ -33,13 +33,13 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-            pragma_foreign_keys = kwargs.pop("pragma_foreign_keys", False)
+            foreign_keys_enabled = kwargs.pop("foreign_keys_enabled", False)
 
             # Create engine, raising exception if back end's module not installed
             self.engine = sqlalchemy.create_engine(url, **kwargs)
 
             # Whether to enable foreign key constraints
-            if pragma_foreign_keys:
+            if foreign_keys_enabled:
                 sqlalchemy.event.listen(self.engine, "connect", _on_connect)
         else:
             # Create engine, raising exception if back end's module not installed
