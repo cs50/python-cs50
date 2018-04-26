@@ -107,7 +107,7 @@ class SQLiteTests(SQLTests):
     @classmethod
     def setUpClass(self):
         self.db = SQL("sqlite:///test.db")
-        self.db1 = SQL("sqlite:///test1.db", foreign_keys_enabled=True)
+        self.db1 = SQL("sqlite:///test1.db", foreign_keys=True)
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")

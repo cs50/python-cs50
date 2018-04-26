@@ -33,14 +33,15 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-            foreign_keys_enabled = kwargs.pop("foreign_keys_enabled", False)
+            # Remember foreign_keys and remove it from kwargs
+            foreign_keys = kwargs.pop("foreign_keys", False)
 
             # Create engine, raising exception if back end's module not installed
             self.engine = sqlalchemy.create_engine(url, **kwargs)
 
-            # Whether to enable foreign key constraints
-            if foreign_keys_enabled:
-                sqlalchemy.event.listen(self.engine, "connect", _on_connect)
+            # Enable foreign key constraints
+            if foreign_keys:
+                sqlalchemy.event.listen(self.engine, "connect", _connect)
         else:
             # Create engine, raising exception if back end's module not installed
             self.engine = sqlalchemy.create_engine(url, **kwargs)
@@ -226,7 +227,7 @@ class SQL(object):
 
 
 # http://docs.sqlalchemy.org/en/latest/dialects/sqlite.html#foreign-key-support
-def _on_connect(dbapi_connection, connection_record):
+def _connect(dbapi_connection, connection_record):
     """Enables foreign key support."""
 
     # Ensure backend is sqlite
