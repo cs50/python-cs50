@@ -43,6 +43,7 @@ class SQL(object):
             if foreign_keys:
                 sqlalchemy.event.listen(self.engine, "connect", _connect)
         else:
+
             # Create engine, raising exception if back end's module not installed
             self.engine = sqlalchemy.create_engine(url, **kwargs)
 
