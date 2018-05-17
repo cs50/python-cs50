@@ -42,6 +42,7 @@ class SQL(object):
             # Enable foreign key constraints
             if foreign_keys:
                 sqlalchemy.event.listen(self.engine, "connect", _connect)
+
         else:
 
             # Create engine, raising exception if back end's module not installed
