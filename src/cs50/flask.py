@@ -6,7 +6,7 @@ from .cs50 import formatException
 # Try to monkey-patch Flask, if installed
 try:
 
-    # Only patch 0.12 (in case logging changes in 0.13)
+    # Only patch <= 0.12 (in case logging changes in 0.13)
     version = StrictVersion(get_distribution("flask").version)
     assert version >= StrictVersion("0.10") and version < StrictVersion("0.13")
 
