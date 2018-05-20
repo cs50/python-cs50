@@ -1,3 +1,4 @@
+import os
 import sys
 import warnings
 
@@ -36,4 +37,28 @@ class CustomImporter(object):
         return SQL
 
 
-sys.meta_path.append(CustomImporter())
+try:
+
+    # Save student's sys.path
+    path = sys.path[:]
+
+    # In case student has files that shadow packages
+    sys.path = [p for p in sys.path if p not in ("", os.getcwd())]
+
+    # Import cs50_*
+    from .cs50 import eprint, get_char, get_float, get_int, get_string
+    try:
+        from .cs50 import get_long
+    except Exception:
+        pass
+
+    # Replace Flask's logger
+    from . import flask
+
+    # Lazily load CS50.SQL
+    sys.meta_path.append(CustomImporter())
+
+finally:
+
+    # Restore student's sys.path (just in case library raised an exception that caller caught)
+    sys.path = path
