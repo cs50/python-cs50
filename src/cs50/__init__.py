@@ -1,4 +1,5 @@
 import sys
+import warnings
 
 from .cs50 import eprint, get_char, get_float, get_int, get_string
 try:
@@ -7,6 +8,10 @@ except:
     pass
 
 from . import flask
+
+# Enable warnings
+warnings.filterwarnings("always", category=DeprecationWarning, module="^cs50\.")
+warnings.filterwarnings("always", category=PendingDeprecationWarning, module="^cs50\.")
 
 
 class CustomImporter(object):

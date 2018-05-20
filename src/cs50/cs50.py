@@ -1,12 +1,13 @@
 from __future__ import print_function
 
-import inspect
 import re
 import sys
+import warnings
 
 from distutils.sysconfig import get_python_lib
+from inspect import getframeinfo, stack
 from os.path import abspath, join
-from termcolor import colored
+from termcolor import colored, cprint
 from traceback import extract_tb, format_list, format_exception_only, format_exception
 
 
@@ -39,8 +40,8 @@ def eprint(*args, **kwargs):
     """
     end = kwargs.get("end", "\n")
     sep = kwargs.get("sep", " ")
-    (filename, lineno) = inspect.stack()[1][1:3]
-    print("{}:{}: ".format(filename, lineno), end="")
+    caller = getframeinfo(stack()[1][0])
+    print("{}:{}: ".format(caller.filename, caller.lineno), end="")
     print(*args, end=end, file=sys.stderr, sep=sep)
 
 
@@ -76,6 +77,9 @@ def get_char(prompt=None):
     if text is not a single char, user is prompted to retry. If line can't
     be read, return None.
     """
+    caller = getframeinfo(stack()[1][0])
+    cprint(warnings.formatwarning("get_char will soon be deprecated, use get_string instead",
+                                  PendingDeprecationWarning, caller.filename, caller.lineno, line=""), "yellow", end="")
     while True:
         s = get_string(prompt)
         if s is None:
