@@ -13,7 +13,7 @@ try:
     from .cs50 import eprint, get_char, get_float, get_int, get_string
     try:
         from .cs50 import get_long
-    except Exception:
+    except ImportError:
         pass
 
     # Replace Flask's logger
