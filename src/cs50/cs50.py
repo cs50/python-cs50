@@ -28,7 +28,25 @@ class flushfile():
         self.f.flush()
 
 
+class Reader:
+    """
+    Disable buffering for input() as well.
+
+    https://bugs.python.org/issue24402
+    """
+
+    def __getattr__(self, name):
+        return getattr(sys.__stdin__, name)
+
+    def fileno():
+        raise OSError()
+
+    def read(self, size):
+        return sys.__stdin__.read(size)
+
+
 sys.stderr = flushfile(sys.stderr)
+sys.stdin = Reader()
 sys.stdout = flushfile(sys.stdout)
 
 
