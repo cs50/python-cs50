@@ -35,18 +35,21 @@ class Reader:
     https://bugs.python.org/issue24402
     """
 
+    def __init__(self, f):
+        self.f = f
+
     def __getattr__(self, name):
-        return getattr(sys.__stdin__, name)
+        return getattr(self.f, name)
 
     def fileno():
         raise OSError()
 
     def read(self, size):
-        return sys.__stdin__.read(size)
+        return self.f.read(size)
 
 
 sys.stderr = flushfile(sys.stderr)
-sys.stdin = Reader()
+sys.stdin = Reader(sys.stdin)
 sys.stdout = flushfile(sys.stdout)
 
 
