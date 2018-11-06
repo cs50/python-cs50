@@ -103,39 +103,39 @@ class SQL(object):
                     """Render a literal value, escaping as needed."""
 
                     # bool
-                    if isinstance(value, bool):
+                    if type(value) is bool:
                         return sqlalchemy.types.Boolean().literal_processor(dialect)(value)
 
                     # datetime.date
-                    elif isinstance(value, datetime.date):
+                    elif type(value) is datetime.date:
                         return sqlalchemy.types.String().literal_processor(dialect)(value.strftime("%Y-%m-%d"))
 
                     # datetime.datetime
-                    elif isinstance(value, datetime.datetime):
+                    elif type(value) is datetime.datetime:
                         return sqlalchemy.types.String().literal_processor(dialect)(value.strftime("%Y-%m-%d %H:%M:%S"))
 
                     # datetime.time
-                    elif isinstance(value, datetime.time):
+                    elif type(value) is datetime.time:
                         return sqlalchemy.types.String().literal_processor(dialect)(value.strftime("%H:%M:%S"))
 
                     # float
-                    elif isinstance(value, float):
+                    elif type(value) is float:
                         return sqlalchemy.types.Float().literal_processor(dialect)(value)
 
                     # int
-                    elif isinstance(value, int):
+                    elif type(value) is int:
                         return sqlalchemy.types.Integer().literal_processor(dialect)(value)
 
                     # long
-                    elif sys.version_info.major != 3 and isinstance(value, long):
+                    elif sys.version_info.major != 3 and type(value) is long:
                         return sqlalchemy.types.Integer().literal_processor(dialect)(value)
 
                     # str
-                    elif isinstance(value, str):
+                    elif type(value) is str:
                         return sqlalchemy.types.String().literal_processor(dialect)(value)
 
                     # None
-                    elif isinstance(value, sqlalchemy.sql.elements.Null):
+                    elif type(value) is sqlalchemy.sql.elements.Null:
                         return sqlalchemy.types.NullType().literal_processor(dialect)(value)
 
                     # Unsupported value
@@ -192,7 +192,7 @@ class SQL(object):
                 rows = [dict(row) for row in result.fetchall()]
                 for row in rows:
                     for column in row:
-                        if isinstance(row[column], decimal.Decimal):
+                        if type(row[column]) is decimal.Decimal:
                             row[column] = float(row[column])
                 ret = rows
 
