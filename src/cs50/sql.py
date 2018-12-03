@@ -87,18 +87,18 @@ class SQL(object):
         return str(e)
 
     def execute(self, text, **params):
-        """
-        Execute a SQL statement.
-        """
-        class UserDefinedType(sqlalchemy.TypeDecorator):
-            """
-            Add support for expandable values, a la https://bitbucket.org/zzzeek/sqlalchemy/issues/3953/expanding-parameter.
-            """
+        """Execute a SQL statement."""
 
+        class UserDefinedType(sqlalchemy.TypeDecorator):
+            """Add support for expandable values, a la https://github.com/sqlalchemy/sqlalchemy/issues/3953."""
+
+            # Required class-level attribute
+            # https://docs.sqlalchemy.org/en/latest/core/custom_types.html#sqlalchemy.types.TypeDecorator
             impl = sqlalchemy.types.UserDefinedType
 
             def process_literal_param(self, value, dialect):
                 """Receive a literal parameter value to be rendered inline within a statement."""
+
                 def process(value):
                     """Render a literal value, escaping as needed."""
 
@@ -147,8 +147,7 @@ class SQL(object):
                 else:
                     return process(value)
 
-        # Allow only one statement at a time
-        # SQLite does not support executing many statements
+        # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
         if len(sqlparse.split(text)) > 1:
             raise RuntimeError("too many statements at once")
@@ -234,10 +233,10 @@ class SQL(object):
 def _connect(dbapi_connection, connection_record):
     """Enables foreign key support."""
 
-    # Ensure backend is sqlite
+    # If back end is sqlite
     if type(dbapi_connection) is sqlite3.Connection:
-        cursor = dbapi_connection.cursor()
 
         # Respect foreign key constraints by default
+        cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
