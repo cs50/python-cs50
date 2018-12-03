@@ -90,8 +90,10 @@ class SQL(object):
         """Execute a SQL statement."""
 
         class UserDefinedType(sqlalchemy.TypeDecorator):
-            """Add support for expandable values, a la https://bitbucket.org/zzzeek/sqlalchemy/issues/3953/expanding-parameter."""
+            """Add support for expandable values, a la https://github.com/sqlalchemy/sqlalchemy/issues/3953."""
 
+            # Required class-level attribute
+            # https://docs.sqlalchemy.org/en/latest/core/custom_types.html#sqlalchemy.types.TypeDecorator
             impl = sqlalchemy.types.UserDefinedType
 
             def process_literal_param(self, value, dialect):
