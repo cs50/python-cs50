@@ -22,7 +22,7 @@ try:
 
     # Add support for Cloud9 proxy so that flask.redirect doesn't redirect from HTTPS to HTTP
     # http://stackoverflow.com/a/23504684/5156190
-    if getenv("C9_PROJECT") == "ide50" and not getenv("IDE_OFFLINE"):
+    if getenv("C9_HOSTNAME") and not getenv("IDE_OFFLINE"):
         try:
             import flask
             from werkzeug.contrib.fixers import ProxyFix
