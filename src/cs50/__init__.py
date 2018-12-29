@@ -10,7 +10,7 @@ try:
     sys.path = [p for p in sys.path if p not in ("", os.getcwd())]
 
     # Import cs50_*
-    from .cs50 import eprint, get_char, get_float, get_int, get_string
+    from .cs50 import get_char, get_float, get_int, get_string
     try:
         from .cs50 import get_long
     except ImportError:
