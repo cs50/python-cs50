@@ -32,6 +32,18 @@ sys.stderr = flushfile(sys.stderr)
 sys.stdout = flushfile(sys.stdout)
 
 
+def eprint(*args, **kwargs):
+    """
+    Print an error message to standard error, prefixing it with
+    file name and line number from which method was called.
+    """
+    end = kwargs.get("end", "\n")
+    sep = kwargs.get("sep", " ")
+    (filename, lineno) = inspect.stack()[1][1:3]
+    print("{}:{}: ".format(filename, lineno), end="")
+    print(*args, end=end, file=sys.stderr, sep=sep)
+
+
 def formatException(type, value, tb):
     """
     Format traceback, darkening entries from global site-packages directories
