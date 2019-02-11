@@ -28,29 +28,20 @@ class flushfile():
         self.f.flush()
 
 
-class Reader:
-    """
-    Disable buffering for input() as well.
-
-    https://bugs.python.org/issue24402
-    """
-
-    def __init__(self, f):
-        self.f = f
-
-    def __getattr__(self, name):
-        return getattr(self.f, name)
-
-    def fileno():
-        raise OSError()
-
-    def read(self, size):
-        return self.f.read(size)
-
-
 sys.stderr = flushfile(sys.stderr)
-sys.stdin = Reader(sys.stdin)
 sys.stdout = flushfile(sys.stdout)
+
+
+def eprint(*args, **kwargs):
+    """
+    Print an error message to standard error, prefixing it with
+    file name and line number from which method was called.
+    """
+    end = kwargs.get("end", "\n")
+    sep = kwargs.get("sep", " ")
+    (filename, lineno) = inspect.stack()[1][1:3]
+    print("{}:{}: ".format(filename, lineno), end="")
+    print(*args, end=end, file=sys.stderr, sep=sep)
 
 
 def formatException(type, value, tb):

@@ -1,7 +1,7 @@
 language: python
 python:
 - '2.7'
-- '3.4'
+- '3.6'
 branches:
   except: "/^v\\d/"
 services:
@@ -20,7 +20,7 @@ after_script: rm -f test.db
 jobs:
   include:
   - stage: deploy
-    python: '3.4'
+    python: '3.6'
     install: skip
     before_script: skip
     script: skip
