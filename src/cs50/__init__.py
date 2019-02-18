@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -8,6 +9,9 @@ try:
 
     # In case student has files that shadow packages
     sys.path = [p for p in sys.path if p not in ("", os.getcwd())]
+
+    # Disable logger by default
+    #logging.getLogger("cs50").disabled = True
 
     # Import cs50_*
     from .cs50 import get_char, get_float, get_int, get_string
