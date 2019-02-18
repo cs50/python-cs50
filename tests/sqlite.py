@@ -7,6 +7,8 @@ from cs50 import SQL
 db = SQL("sqlite:///sqlite.db")
 db.execute("SELECT 1")
 
+db.execute("SELECT * FROM Employee WHERE FirstName = ?", "' OR 1 = 1")
+
 db.execute("SELECT * FROM Employee WHERE FirstName = ? AND LastName = ?", "Andrew", "Adams")
 db.execute("SELECT * FROM Employee WHERE FirstName = ? AND LastName = ?", ["Andrew", "Adams"])
 db.execute("SELECT * FROM Employee WHERE FirstName = ? AND LastName = ?", ("Andrew", "Adams"))
