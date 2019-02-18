@@ -34,12 +34,12 @@ try:
             if flask.current_app:
                 logging.getLogger("cs50").disabled = False
             try:
-                _before(*args, **kwargs)
+                ret = _before(*args, **kwargs)
+                logging.getLogger("cs50").disabled = disabled
+                return ret
             except:
                 logging.getLogger("cs50").disabled = disabled
                 raise
-            else:
-                logging.getLogger("cs50").disabled = disabled
         SQL.execute = _after
     except:
         pass
