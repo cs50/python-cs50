@@ -59,34 +59,13 @@ class SQL(object):
         # Log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
 
-        def parse(self, e):
-            """Parses an exception, returns its message."""
-
-            # MySQL
-            matches = re.search(r"^\(_mysql_exceptions\.OperationalError\) \(\d+, \"(.+)\"\)$", str(e))
-            if matches:
-                return matches.group(1)
-
-            # PostgreSQL
-            matches = re.search(r"^\(psycopg2\.OperationalError\) (.+)$", str(e))
-            if matches:
-                return matches.group(1)
-
-            # SQLite
-            matches = re.search(r"^\(sqlite3\.OperationalError\) (.+)$", str(e))
-            if matches:
-                return matches.group(1)
-
-            # Default
-            return str(e)
-
         # Test database
         try:
             disabled = self._logger.disabled
             self._logger.disabled = True
             self.execute("SELECT 1")
         except sqlalchemy.exc.OperationalError as e:
-            e = RuntimeError(parse(e))
+            e = RuntimeError(self._parse_exception(e))
             e.__cause__ = None
             raise e
         else:
@@ -126,19 +105,8 @@ class SQL(object):
             # If token is a placeholder
             if token.ttype == sqlparse.tokens.Name.Placeholder:
 
-                # Determine paramstyle
-                if token.value == "?":
-                    _paramstyle = "qmark"
-                elif re.search(r"^:[1-9]\d*$", token.value):
-                    _paramstyle = "numeric"
-                elif re.search(r"^:[a-zA-Z]\w*$", token.value):
-                    _paramstyle = "named"
-                elif re.search(r"^TODO$", token.value):  # TODO
-                    _paramstyle = "named"
-                elif re.search(r"%\([a-zA-Z]\w*\)s$", token.value):  # TODO
-                    _paramstyle = "pyformat"
-                else:
-                    raise RuntimeError("{}: invalid placeholder".format(token.value))
+                # Determine paramstyle, name
+                _paramstyle, name = self._parse_placeholder(token)
 
                 # Ensure paramstyle is consistent
                 if paramstyle is not None and _paramstyle != paramstyle:
@@ -148,10 +116,15 @@ class SQL(object):
                 if paramstyle is None:
                     paramstyle = _paramstyle
 
-                # Remember placeholder
-                placeholders[index] = token.value
+                # Remember placeholder's index, name
+                placeholders[index] = name
 
         def escape(value):
+            """
+            Escapes value using engine's conversion function.
+
+            https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
+            """
 
             # bool
             if type(value) is bool:
@@ -221,9 +194,9 @@ class SQL(object):
         elif paramstyle == "numeric":
 
             # Escape values
-            for index, value in placeholders.items():
-                i = int(re.sub(r"^:", "", value)) - 1
-                if i >= len(args):
+            for index, name in placeholders.items():
+                i = int(name) - 1
+                if i < 0 or i >= len(args):
                     raise RuntimeError("placeholder out of range")
                 tokens[index] = escape(args[i])
 
@@ -231,8 +204,29 @@ class SQL(object):
         elif paramstyle == "named":
 
             # Escape values
-            for index, value in placeholders.items():
-                name = re.sub(r"^:", "", value)
+            for index, name in placeholders.items():
+                if name not in kwargs:
+                    raise RuntimeError("missing value for placeholder")
+                tokens[index] = escape(kwargs[name])
+
+        # format
+        elif paramstyle == "format":
+
+            # Validate number of placeholders
+            if len(placeholders) < len(args):
+                raise RuntimeError("too few placeholders")
+            elif len(placeholders) > len(args):
+                raise RuntimeError("too many placeholders")
+
+            # Escape values
+            for i, index in enumerate(placeholders.keys()):
+                tokens[index] = escape(args[i])
+
+        # pyformat
+        elif paramstyle == "pyformat":
+
+            # Escape values
+            for index, name in placeholders.items():
                 if name not in kwargs:
                     raise RuntimeError("missing value for placeholder")
                 tokens[index] = escape(kwargs[name])
@@ -285,7 +279,7 @@ class SQL(object):
         # If user errror
         except sqlalchemy.exc.OperationalError as e:
             self._logger.debug(termcolor.colored(statement, "red"))
-            e = RuntimeError(self._parse(e))
+            e = RuntimeError(self._parse_exception(e))
             e.__cause__ = None
             raise e
 
@@ -293,3 +287,57 @@ class SQL(object):
         else:
             self._logger.debug(termcolor.colored(statement, "green"))
             return ret
+
+    def _parse_exception(self, e):
+        """Parses an exception, returns its message."""
+
+        # MySQL
+        matches = re.search(r"^\(_mysql_exceptions\.OperationalError\) \(\d+, \"(.+)\"\)$", str(e))
+        if matches:
+            return matches.group(1)
+
+        # PostgreSQL
+        matches = re.search(r"^\(psycopg2\.OperationalError\) (.+)$", str(e))
+        if matches:
+            return matches.group(1)
+
+        # SQLite
+        matches = re.search(r"^\(sqlite3\.OperationalError\) (.+)$", str(e))
+        if matches:
+            return matches.group(1)
+
+        # Default
+        return str(e)
+
+    def _parse_placeholder(self, token):
+        """Infers paramstyle, name from sqlparse.tokens.Name.Placeholder."""
+
+        # Validate token
+        if not isinstance(token, sqlparse.sql.Token) or token.ttype != sqlparse.tokens.Name.Placeholder:
+            raise TypeError()
+
+        # qmark
+        if token.value == "?":
+            return "qmark", None
+
+        # numeric
+        matches = re.search(r"^:(\d+)$", token.value)
+        if matches:
+            return "numeric", matches.group(1)
+
+        # named
+        matches = re.search(r"^:([a-zA-Z]\w*)$", token.value)
+        if matches:
+            return "named", matches.group(1)
+
+        # format
+        if token.value == "%s":
+            return "format", None
+
+        # pyformat
+        matches = re.search(r"%\((\w+)\)s$", token.value)
+        if matches:
+            return "pyformat", matches.group(1)
+
+        # Invalid
+        raise RuntimeError("{}: invalid placeholder".format(token.value))
