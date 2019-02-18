@@ -66,7 +66,7 @@ class SQL(object):
             self.execute("SELECT 1")
             self._logger.disabled = disabled
         except sqlalchemy.exc.OperationalError as e:
-            e = RuntimeError(self._parse_exception(e))
+            e = RuntimeError(_parse_exception(e))
             e.__cause__ = None
             self._logger.disabled = disabled
             raise e
@@ -86,14 +86,6 @@ class SQL(object):
         if len(args) > 0 and len(kwargs) > 0:
             raise RuntimeError("cannot pass both named and positional parameters")
 
-        # In case user passes args in list or tuple
-        if len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)):
-            args = args[0]
-
-        # In case user passes kwargs in dict
-        if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], dict):
-            kwargs = args[0]
-
         # Flatten statement
         tokens = list(statements[0].flatten())
 
@@ -106,7 +98,7 @@ class SQL(object):
             if token.ttype == sqlparse.tokens.Name.Placeholder:
 
                 # Determine paramstyle, name
-                _paramstyle, name = self._parse_placeholder(token)
+                _paramstyle, name = _parse_placeholder(token)
 
                 # Ensure paramstyle is consistent
                 if paramstyle is not None and _paramstyle != paramstyle:
@@ -119,63 +111,13 @@ class SQL(object):
                 # Remember placeholder's index, name
                 placeholders[index] = name
 
-        def escape(value):
-            """
-            Escapes value using engine's conversion function.
+        # In case user passes args in list or tuple
+        if len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)) and len(placeholders) != 1:
+            args = args[0]
 
-            https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
-            """
-
-            # bool
-            if type(value) is bool:
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.Number,
-                    sqlalchemy.types.Boolean().literal_processor(self.engine.dialect)(value))
-
-            # datetime.date
-            elif type(value) is datetime.date:
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%Y-%m-%d")))
-
-            # datetime.datetime
-            elif type(value) is datetime.datetime:
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%Y-%m-%d %H:%M:%S")))
-
-            # datetime.time
-            elif type(value) is datetime.time:
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%H:%M:%S")))
-
-            # float
-            elif type(value) is float:
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.Number,
-                    sqlalchemy.types.Float().literal_processor(self.engine.dialect)(value))
-
-            # int
-            elif type(value) is int:
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.Number,
-                    sqlalchemy.types.Integer().literal_processor(self.engine.dialect)(value))
-
-            # str
-            elif type(value) is str:
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value))
-
-            # None
-            elif value is None:
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.Keyword,
-                    sqlalchemy.types.NullType().literal_processor(self.engine.dialect)(value))
-
-            # Unsupported value
-            raise RuntimeError("unsupported value: {}".format(value))
+        # In case user passes kwargs in dict
+        if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], dict) and len(placeholders) != 1:
+            kwargs = args[0]
 
         # qmark
         if paramstyle == "qmark":
@@ -188,7 +130,7 @@ class SQL(object):
 
             # Escape values
             for i, index in enumerate(placeholders.keys()):
-                tokens[index] = escape(args[i])
+                tokens[index] = self._escape(args[i])
 
         # numeric
         elif paramstyle == "numeric":
@@ -198,7 +140,7 @@ class SQL(object):
                 i = int(name) - 1
                 if i < 0 or i >= len(args):
                     raise RuntimeError("placeholder out of range")
-                tokens[index] = escape(args[i])
+                tokens[index] = self._escape(args[i])
 
         # named
         elif paramstyle == "named":
@@ -207,7 +149,7 @@ class SQL(object):
             for index, name in placeholders.items():
                 if name not in kwargs:
                     raise RuntimeError("missing value for placeholder")
-                tokens[index] = escape(kwargs[name])
+                tokens[index] = self._escape(kwargs[name])
 
         # format
         elif paramstyle == "format":
@@ -220,7 +162,7 @@ class SQL(object):
 
             # Escape values
             for i, index in enumerate(placeholders.keys()):
-                tokens[index] = escape(args[i])
+                tokens[index] = self._escape(args[i])
 
         # pyformat
         elif paramstyle == "pyformat":
@@ -229,7 +171,7 @@ class SQL(object):
             for index, name in placeholders.items():
                 if name not in kwargs:
                     raise RuntimeError("missing value for placeholder")
-                tokens[index] = escape(kwargs[name])
+                tokens[index] = self._escape(kwargs[name])
 
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
@@ -282,7 +224,7 @@ class SQL(object):
         # If user errror
         except sqlalchemy.exc.OperationalError as e:
             self._logger.debug(termcolor.colored(statement, "red"))
-            e = RuntimeError(self._parse_exception(e))
+            e = RuntimeError(_parse_exception(e))
             e.__cause__ = None
             raise e
 
@@ -291,56 +233,127 @@ class SQL(object):
             self._logger.debug(termcolor.colored(statement, "green"))
             return ret
 
-    def _parse_exception(self, e):
-        """Parses an exception, returns its message."""
+    def _escape(self, value):
+        """
+        Escapes value using engine's conversion function.
 
-        # MySQL
-        matches = re.search(r"^\(_mysql_exceptions\.OperationalError\) \(\d+, \"(.+)\"\)$", str(e))
-        if matches:
-            return matches.group(1)
+        https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
+        """
 
-        # PostgreSQL
-        matches = re.search(r"^\(psycopg2\.OperationalError\) (.+)$", str(e))
-        if matches:
-            return matches.group(1)
+        def __escape(value):
 
-        # SQLite
-        matches = re.search(r"^\(sqlite3\.OperationalError\) (.+)$", str(e))
-        if matches:
-            return matches.group(1)
+            # bool
+            if type(value) is bool:
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.Number,
+                    sqlalchemy.types.Boolean().literal_processor(self.engine.dialect)(value))
 
-        # Default
-        return str(e)
+            # datetime.date
+            elif type(value) is datetime.date:
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.String,
+                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%Y-%m-%d")))
 
-    def _parse_placeholder(self, token):
-        """Infers paramstyle, name from sqlparse.tokens.Name.Placeholder."""
+            # datetime.datetime
+            elif type(value) is datetime.datetime:
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.String,
+                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%Y-%m-%d %H:%M:%S")))
 
-        # Validate token
-        if not isinstance(token, sqlparse.sql.Token) or token.ttype != sqlparse.tokens.Name.Placeholder:
-            raise TypeError()
+            # datetime.time
+            elif type(value) is datetime.time:
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.String,
+                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%H:%M:%S")))
 
-        # qmark
-        if token.value == "?":
-            return "qmark", None
+            # float
+            elif type(value) is float:
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.Number,
+                    sqlalchemy.types.Float().literal_processor(self.engine.dialect)(value))
 
-        # numeric
-        matches = re.search(r"^:(\d+)$", token.value)
-        if matches:
-            return "numeric", matches.group(1)
+            # int
+            elif type(value) is int:
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.Number,
+                    sqlalchemy.types.Integer().literal_processor(self.engine.dialect)(value))
 
-        # named
-        matches = re.search(r"^:([a-zA-Z]\w*)$", token.value)
-        if matches:
-            return "named", matches.group(1)
+            # str
+            elif type(value) is str:
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.String,
+                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value))
 
-        # format
-        if token.value == "%s":
-            return "format", None
+            # None
+            elif value is None:
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.Keyword,
+                    sqlalchemy.types.NullType().literal_processor(self.engine.dialect)(value))
 
-        # pyformat
-        matches = re.search(r"%\((\w+)\)s$", token.value)
-        if matches:
-            return "pyformat", matches.group(1)
+            # Unsupported value
+            else:
+                raise RuntimeError("unsupported value: {}".format(value))
 
-        # Invalid
-        raise RuntimeError("{}: invalid placeholder".format(token.value))
+        # Escape value(s), separating with commas as needed
+        if type(value) in [list, tuple]:
+            return sqlparse.sql.TokenList(sqlparse.parse(", ".join([str(__escape(v)) for v in value])))
+        else:
+            return sqlparse.sql.Token(
+                sqlparse.tokens.String,
+                __escape(value))
+
+
+def _parse_exception(e):
+    """Parses an exception, returns its message."""
+
+    # MySQL
+    matches = re.search(r"^\(_mysql_exceptions\.OperationalError\) \(\d+, \"(.+)\"\)$", str(e))
+    if matches:
+        return matches.group(1)
+
+    # PostgreSQL
+    matches = re.search(r"^\(psycopg2\.OperationalError\) (.+)$", str(e))
+    if matches:
+        return matches.group(1)
+
+    # SQLite
+    matches = re.search(r"^\(sqlite3\.OperationalError\) (.+)$", str(e))
+    if matches:
+        return matches.group(1)
+
+    # Default
+    return str(e)
+
+
+def _parse_placeholder(token):
+    """Infers paramstyle, name from sqlparse.tokens.Name.Placeholder."""
+
+    # Validate token
+    if not isinstance(token, sqlparse.sql.Token) or token.ttype != sqlparse.tokens.Name.Placeholder:
+        raise TypeError()
+
+    # qmark
+    if token.value == "?":
+        return "qmark", None
+
+    # numeric
+    matches = re.search(r"^:(\d+)$", token.value)
+    if matches:
+        return "numeric", matches.group(1)
+
+    # named
+    matches = re.search(r"^:([a-zA-Z]\w*)$", token.value)
+    if matches:
+        return "named", matches.group(1)
+
+    # format
+    if token.value == "%s":
+        return "format", None
+
+    # pyformat
+    matches = re.search(r"%\((\w+)\)s$", token.value)
+    if matches:
+        return "pyformat", matches.group(1)
+
+    # Invalid
+    raise RuntimeError("{}: invalid placeholder".format(token.value))
