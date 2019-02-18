@@ -243,33 +243,36 @@ class SQL(object):
             # Execute statement
             result = self.engine.execute(statement)
 
-            # If SELECT (or INSERT with RETURNING), return result set as list of dict objects
-            if re.search(r"^\s*SELECT", statement, re.I):
+            # Return value
+            ret = True
+            if tokens[0].ttype == sqlparse.tokens.Keyword.DML:
 
-                # Coerce any decimal.Decimal objects to float objects
-                # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
-                rows = [dict(row) for row in result.fetchall()]
-                for row in rows:
-                    for column in row:
-                        if type(row[column]) is decimal.Decimal:
-                            row[column] = float(row[column])
-                ret = rows
+                # Uppercase token's value
+                value = tokens[0].value.upper()
 
-            # If INSERT, return primary key value for a newly inserted row
-            elif re.search(r"^\s*INSERT", statement, re.I):
-                if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
-                    result = self.engine.execute(sqlalchemy.text("SELECT LASTVAL()"))
-                    ret = result.first()[0]
-                else:
-                    ret = result.lastrowid
+                # If SELECT (or INSERT with RETURNING), return result set as list of dict objects
+                if value == "SELECT":
 
-            # If DELETE or UPDATE, return number of rows matched
-            elif re.search(r"^\s*(?:DELETE|UPDATE)", statement, re.I):
-                ret = result.rowcount
+                    # Coerce any decimal.Decimal objects to float objects
+                    # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
+                    rows = [dict(row) for row in result.fetchall()]
+                    for row in rows:
+                        for column in row:
+                            if type(row[column]) is decimal.Decimal:
+                                row[column] = float(row[column])
+                    ret = rows
 
-            # If some other statement, return True unless exception
-            else:
-                ret = True
+                # If INSERT, return primary key value for a newly inserted row
+                elif value == "INSERT":
+                    if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
+                        result = self.engine.execute(sqlalchemy.text("SELECT LASTVAL()"))
+                        ret = result.first()[0]
+                    else:
+                        ret = result.lastrowid
+
+                # If DELETE or UPDATE, return number of rows matched
+                elif value in ["DELETE", "UPDATE"]:
+                    ret = result.rowcount
 
         # If constraint violated, return None
         except sqlalchemy.exc.IntegrityError:

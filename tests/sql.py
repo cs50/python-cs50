@@ -110,14 +110,19 @@ class SQLiteTests(SQLTests):
         self.db1 = SQL("sqlite:///test1.db", foreign_keys=True)
 
     def setUp(self):
+        self.db.execute("DROP TABLE IF EXISTS cs50")
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
 
     def test_foreign_key_support(self):
+        self.db.execute("DROP TABLE IF EXISTS foo")
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
+        self.db.execute("DROP TABLE IF EXISTS bar")
         self.db.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
         self.assertEqual(self.db.execute("INSERT INTO bar VALUES(50)"), 1)
 
+        self.db1.execute("DROP TABLE IF EXISTS foo")
         self.db1.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
+        self.db1.execute("DROP TABLE IF EXISTS bar")
         self.db1.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
         self.assertEqual(self.db1.execute("INSERT INTO bar VALUES(50)"), None)
 
