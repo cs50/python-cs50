@@ -1,17 +1,13 @@
-import logging
 import os
 import sys
 
 try:
 
     # Save student's sys.path
-    path = sys.path[:]
+    _path = sys.path[:]
 
     # In case student has files that shadow packages
     sys.path = [p for p in sys.path if p not in ("", os.getcwd())]
-
-    # Disable logger by default
-    #logging.getLogger("cs50").disabled = True
 
     # Import cs50_*
     from .cs50 import get_char, get_float, get_int, get_string
@@ -29,4 +25,4 @@ try:
 finally:
 
     # Restore student's sys.path (just in case library raised an exception that caller caught)
-    sys.path = path
+    sys.path = _path

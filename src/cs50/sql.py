@@ -64,12 +64,12 @@ class SQL(object):
             disabled = self._logger.disabled
             self._logger.disabled = True
             self.execute("SELECT 1")
+            self._logger.disabled = disabled
         except sqlalchemy.exc.OperationalError as e:
             e = RuntimeError(self._parse_exception(e))
             e.__cause__ = None
-            raise e
-        else:
             self._logger.disabled = disabled
+            raise e
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""

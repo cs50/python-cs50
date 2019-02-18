@@ -1,8 +1,11 @@
+import logging
 import sys
 
 sys.path.insert(0, "../src")
 
 from cs50 import SQL
+
+logging.getLogger("cs50").disabled = False
 
 db = SQL("sqlite:///sqlite.db")
 db.execute("SELECT 1")
