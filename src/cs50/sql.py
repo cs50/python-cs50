@@ -250,7 +250,7 @@ class SQL(object):
                 # Uppercase token's value
                 value = tokens[0].value.upper()
 
-                # If SELECT (or INSERT with RETURNING), return result set as list of dict objects
+                # If SELECT, return result set as list of dict objects
                 if value == "SELECT":
 
                     # Coerce any decimal.Decimal objects to float objects
