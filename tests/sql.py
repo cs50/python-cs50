@@ -106,7 +106,9 @@ class PostgresTests(SQLTests):
 class SQLiteTests(SQLTests):
     @classmethod
     def setUpClass(self):
+        open("test.db", "w").close()
         self.db = SQL("sqlite:///test.db")
+        open("test1.db", "w").close()
         self.db1 = SQL("sqlite:///test1.db", foreign_keys=True)
 
     def setUp(self):
