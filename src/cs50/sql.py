@@ -156,11 +156,17 @@ class SQL(object):
         elif paramstyle == "numeric":
 
             # Escape values
-            for index, name in placeholders.items():
-                i = int(name) - 1
+            for index, i in placeholders.items():
                 if i >= len(args):
-                    raise RuntimeError("placeholder (:{}) greater than number of values ({})".format(name, _args))
+                    raise RuntimeError("missing value for placeholder (:{})".format(i + 1, len(args)))
                 tokens[index] = self._escape(args[i])
+
+            # Check if any values unused
+            indices = set(range(len(args))) - set(placeholders.values())
+            if indices:
+                raise RuntimeError("unused {} ({})".format(
+                    "value" if len(indices) == 1 else "values",
+                    ", ".join([str(self._escape(args[index])) for index in indices])))
 
         # named
         elif paramstyle == "named":
@@ -170,6 +176,11 @@ class SQL(object):
                 if name not in kwargs:
                     raise RuntimeError("missing value for placeholder (:{})".format(name))
                 tokens[index] = self._escape(kwargs[name])
+
+            # Check if any keys unused
+            keys = kwargs.keys() - placeholders.values()
+            if keys:
+                raise RuntimeError("unused values ({})".format(", ".join(keys)))
 
         # format
         elif paramstyle == "format":
@@ -191,8 +202,15 @@ class SQL(object):
             # Escape values
             for index, name in placeholders.items():
                 if name not in kwargs:
-                    raise RuntimeError("missing value for placeholder (:{})".format(name))
+                    raise RuntimeError("missing value for placeholder (%{}s)".format(name))
                 tokens[index] = self._escape(kwargs[name])
+
+            # Check if any keys unused
+            keys = kwargs.keys() - placeholders.values()
+            if keys:
+                raise RuntimeError("unused {} ({})".format(
+                    "value" if len(keys) == 1 else "values",
+                    ", ".join(keys)))
 
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
@@ -362,9 +380,9 @@ def _parse_placeholder(token):
         return "qmark", None
 
     # numeric
-    matches = re.search(r"^:(\d+)$", token.value)
+    matches = re.search(r"^:([1-9]\d*)$", token.value)
     if matches:
-        return "numeric", matches.group(1)
+        return "numeric", int(matches.group(1)) - 1
 
     # named
     matches = re.search(r"^:([a-zA-Z]\w*)$", token.value)
