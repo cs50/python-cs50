@@ -17,6 +17,8 @@ db.execute("SELECT * FROM Employee WHERE FirstName IN (?)", ["Andrew"])
 db.execute("SELECT * FROM Employee WHERE FirstName IN (?)", ("Andrew",))
 db.execute("SELECT * FROM Employee WHERE FirstName IN (?)", ["Andrew", "Nancy"])
 db.execute("SELECT * FROM Employee WHERE FirstName IN (?)", ("Andrew", "Nancy"))
+db.execute("SELECT * FROM Employee WHERE FirstName IN (?)", [])
+db.execute("SELECT * FROM Employee WHERE FirstName IN (?)", ())
 
 db.execute("SELECT * FROM Employee WHERE FirstName = ? AND LastName = ?", "Andrew", "Adams")
 db.execute("SELECT * FROM Employee WHERE FirstName = ? AND LastName = ?", ["Andrew", "Adams"])

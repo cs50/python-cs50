@@ -19,7 +19,7 @@ try:
     try:
         import flask.logging
         flask.logging.default_handler.formatter.formatException = lambda exc_info: formatException(*exc_info)
-    except:
+    except Exception:
         pass
 
     # Enable logging when Flask is in use,
@@ -28,21 +28,19 @@ try:
     try:
         import flask
         from .sql import SQL
+    except ImportError:
+        pass
+    else:
         _before = SQL.execute
         def _after(*args, **kwargs):
             disabled = logging.getLogger("cs50").disabled
             if flask.current_app:
                 logging.getLogger("cs50").disabled = False
             try:
-                ret = _before(*args, **kwargs)
+                return _before(*args, **kwargs)
+            finally:
                 logging.getLogger("cs50").disabled = disabled
-                return ret
-            except:
-                logging.getLogger("cs50").disabled = disabled
-                raise
         SQL.execute = _after
-    except:
-        pass
 
     # Add support for Cloud9 proxy so that flask.redirect doesn't redirect from HTTPS to HTTP
     # http://stackoverflow.com/a/23504684/5156190
@@ -58,6 +56,5 @@ try:
         except:
             pass
 
-except Exception as e:
-    print(e)
+except Exception:
     pass

@@ -100,33 +100,54 @@ class SQL(object):
                 # Determine paramstyle, name
                 _paramstyle, name = _parse_placeholder(token)
 
-                # Ensure paramstyle is consistent
-                if paramstyle is not None and _paramstyle != paramstyle:
-                    raise RuntimeError("inconsistent paramstyle")
-
                 # Remember paramstyle
-                if paramstyle is None:
+                if not paramstyle:
                     paramstyle = _paramstyle
+
+                # Ensure paramstyle is consistent
+                elif _paramstyle != paramstyle:
+                    raise RuntimeError("inconsistent paramstyle")
 
                 # Remember placeholder's index, name
                 placeholders[index] = name
 
-        # In case user passes args in list or tuple
-        if len(args) == 1 and (isinstance(args[0], list) or isinstance(args[0], tuple)) and len(placeholders) != 1:
-            args = args[0]
+        # If more placeholders than arguments
+        if len(args) == 1 and len(placeholders) > 1:
 
-        # In case user passes kwargs in dict
-        if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], dict) and len(placeholders) != 1:
-            kwargs = args[0]
+            # If user passed args as list or tuple, explode values into args
+            if isinstance(args[0], (list, tuple)):
+                args = args[0]
+
+            # If user passed kwargs as dict, migrate values from args to kwargs
+            elif len(kwargs) == 0 and isinstance(args[0], dict):
+                kwargs = args[0]
+                args = []
+
+        # If no placeholders
+        if not paramstyle:
+
+            # Error-check like qmark if args
+            if args:
+                paramstyle = "qmark"
+
+            # Error-check like named if kwargs
+            elif kwargs:
+                paramstyle = "named"
+
+        # In case of errors
+        _placeholders = ", ".join([str(tokens[index]) for index in placeholders])
+        _args = ", ".join([str(self._escape(arg)) for arg in args])
+        #_kwargs = ", ".join([str(self._escape(arg)) for arg in args])
 
         # qmark
         if paramstyle == "qmark":
 
             # Validate number of placeholders
-            if len(placeholders) < len(args):
-                raise RuntimeError("too few placeholders")
-            elif len(placeholders) > len(args):
-                raise RuntimeError("too many placeholders")
+            if len(placeholders) != len(args):
+                if len(placeholders) < len(args):
+                    raise RuntimeError("fewer placeholders ({}) than values ({})".format(_placeholders, _args))
+                else:
+                    raise RuntimeError("more placeholders ({}) than values ({})".format(_placeholders, _args))
 
             # Escape values
             for i, index in enumerate(placeholders.keys()):
@@ -138,8 +159,8 @@ class SQL(object):
             # Escape values
             for index, name in placeholders.items():
                 i = int(name) - 1
-                if i < 0 or i >= len(args):
-                    raise RuntimeError("placeholder out of range")
+                if i >= len(args):
+                    raise RuntimeError("placeholder (:{}) greater than number of values ({})".format(name, _args))
                 tokens[index] = self._escape(args[i])
 
         # named
@@ -148,17 +169,18 @@ class SQL(object):
             # Escape values
             for index, name in placeholders.items():
                 if name not in kwargs:
-                    raise RuntimeError("missing value for placeholder")
+                    raise RuntimeError("missing value for placeholder (:{})".format(name))
                 tokens[index] = self._escape(kwargs[name])
 
         # format
         elif paramstyle == "format":
 
             # Validate number of placeholders
-            if len(placeholders) < len(args):
-                raise RuntimeError("too few placeholders")
-            elif len(placeholders) > len(args):
-                raise RuntimeError("too many placeholders")
+            if len(placeholders) != len(args):
+                if len(placeholders) < len(args):
+                    raise RuntimeError("fewer placeholders ({}) than values ({})".format(_placeholders, _args))
+                else:
+                    raise RuntimeError("more placeholders ({}) than values ({})".format(_placeholders, _args))
 
             # Escape values
             for i, index in enumerate(placeholders.keys()):
@@ -170,7 +192,7 @@ class SQL(object):
             # Escape values
             for index, name in placeholders.items():
                 if name not in kwargs:
-                    raise RuntimeError("missing value for placeholder")
+                    raise RuntimeError("missing value for placeholder (:{})".format(name))
                 tokens[index] = self._escape(kwargs[name])
 
         # Join tokens into statement
