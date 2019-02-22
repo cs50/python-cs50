@@ -209,7 +209,7 @@ class SQLiteTests(SQLTests):
 
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar)")
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)")
-        # self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", bar='bar', baz='baz', qux='qux')
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", bar='bar', baz='baz', qux='qux')
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", 'baz', bar='bar')
 
 
@@ -255,11 +255,7 @@ class SQLiteTests(SQLTests):
 
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1)")
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)")
-        # self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1)", ('bar', 'baz'))
-        # self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1)", ['bar', 'baz'])
-        # self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', 'baz', 'qux')
-        # self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", ('bar', 'baz', 'qux'))
-        # self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", ['bar', 'baz', 'qux'])
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', 'baz', 'qux')
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', baz='baz')
 
 
