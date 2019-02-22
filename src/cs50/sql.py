@@ -222,7 +222,7 @@ class SQL(object):
         try:
 
             # Execute statement
-            result = self.engine.execute(statement)
+            result = self.engine.execute(sqlalchemy.text(statement))
 
             # Return value
             ret = True
@@ -246,7 +246,7 @@ class SQL(object):
                 # If INSERT, return primary key value for a newly inserted row
                 elif value == "INSERT":
                     if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
-                        result = self.engine.execute(sqlalchemy.text("SELECT LASTVAL()"))
+                        result = self.engine.execute("SELECT LASTVAL()")
                         ret = result.first()[0]
                     else:
                         ret = result.lastrowid
