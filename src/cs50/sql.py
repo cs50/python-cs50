@@ -64,12 +64,12 @@ class SQL(object):
             disabled = self._logger.disabled
             self._logger.disabled = True
             self.execute("SELECT 1")
-            self._logger.disabled = disabled
         except sqlalchemy.exc.OperationalError as e:
             e = RuntimeError(_parse_exception(e))
             e.__cause__ = None
-            self._logger.disabled = disabled
             raise e
+        finally:
+            self._logger.disabled = disabled
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
@@ -137,7 +137,6 @@ class SQL(object):
         # In case of errors
         _placeholders = ", ".join([str(tokens[index]) for index in placeholders])
         _args = ", ".join([str(self._escape(arg)) for arg in args])
-        #_kwargs = ", ".join([str(self._escape(arg)) for arg in args])
 
         # qmark
         if paramstyle == "qmark":
@@ -269,6 +268,10 @@ class SQL(object):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Number,
                     sqlalchemy.types.Boolean().literal_processor(self.engine.dialect)(value))
+
+            # bytearray, bytes
+            elif type(value) in [bytearray, bytes]:
+                raise RuntimeError("unsupported value")  # TODO
 
             # datetime.date
             elif type(value) is datetime.date:

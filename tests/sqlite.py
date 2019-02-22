@@ -10,6 +10,9 @@ logging.getLogger("cs50").disabled = False
 db = SQL("sqlite:///sqlite.db")
 db.execute("SELECT 1")
 
+# TODO
+#db.execute("SELECT * FROM Employee WHERE FirstName = ?", b'\x00')
+
 db.execute("SELECT * FROM Employee WHERE FirstName = ?", "' OR 1 = 1")
 
 db.execute("SELECT * FROM Employee WHERE FirstName IN (?)", "Andrew")
