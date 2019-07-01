@@ -7,10 +7,10 @@ import sys
 from distutils.sysconfig import get_python_lib
 from os.path import abspath, join
 from termcolor import colored
-from traceback import extract_tb, format_exception
+from traceback import format_exception
 
 
-class flushfile():
+class _flushfile():
     """
     Disable buffering for standard output and standard error.
 
@@ -28,15 +28,15 @@ class flushfile():
         self.f.flush()
 
 
-sys.stderr = flushfile(sys.stderr)
-sys.stdout = flushfile(sys.stdout)
+sys.stderr = _flushfile(sys.stderr)
+sys.stdout = _flushfile(sys.stdout)
 
 
 def eprint(*args, **kwargs):
-    raise NotImplementedError("The CS50 Library for Python no longer supports eprint, but you can use print instead!")
+    raise RuntimeError("The CS50 Library for Python no longer supports eprint, but you can use print instead!")
 
 
-def formatException(type, value, tb):
+def _formatException(type, value, tb):
     """
     Format traceback, darkening entries from global site-packages directories
     and user-specific site-packages directory.
@@ -44,17 +44,12 @@ def formatException(type, value, tb):
     https://stackoverflow.com/a/46071447/5156190
     """
 
-    # Don't print tracebacks for deprecations
-    summary = extract_tb(tb)
-    if summary and summary[-1].filename == __file__ and type == NotImplementedError:
-        return "".join(format_exception(type, value, None)).rstrip()
-
     # Absolute paths to site-packages
     packages = tuple(join(abspath(p), "") for p in sys.path[1:])
 
     # Highlight lines not referring to files in site-packages
     lines = []
-    for line in format_exception(type, value, tb):
+    for line in format_exception(type, value, None if type == RuntimeError else tb):  # Don't print tracebacks for deprecations
         matches = re.search(r"^  File \"([^\"]+)\", line \d+, in .+", line)
         if matches and matches.group(1).startswith(packages):
             lines += line
@@ -64,11 +59,11 @@ def formatException(type, value, tb):
     return "".join(lines).rstrip()
 
 
-sys.excepthook = lambda type, value, tb: print(formatException(type, value, tb), file=sys.stderr)
+sys.excepthook = lambda type, value, tb: print(_formatException(type, value, tb), file=sys.stderr)
 
 
 def get_char(prompt=None):
-    raise NotImplementedError("The CS50 Library for Python no longer supports get_char (because Python doesn't have a type for individual characters), but you can use get_string instead!")
+    raise RuntimeError("The CS50 Library for Python no longer supports get_char, but you can use get_string instead!")
 
 
 def get_float(prompt):
@@ -100,9 +95,7 @@ def get_int(prompt):
             return None
         if re.search(r"^[+-]?\d+$", s):
             try:
-                i = int(s, 10)
-                if type(i) is int:  # Could become long in Python 2
-                    return i
+                return int(s, 10)
             except ValueError:
                 pass
 
