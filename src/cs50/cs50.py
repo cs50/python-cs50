@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import inspect
+import os
 import re
 import sys
 
@@ -49,7 +50,7 @@ def _formatException(type, value, tb):
 
     # Highlight lines not referring to files in site-packages
     lines = []
-    for line in format_exception(type, value, None if type == RuntimeError else tb):  # Don't print tracebacks for deprecations
+    for line in format_exception(type, value, tb):
         matches = re.search(r"^  File \"([^\"]+)\", line \d+, in .+", line)
         if matches and matches.group(1).startswith(packages):
             lines += line
