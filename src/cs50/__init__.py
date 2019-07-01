@@ -4,7 +4,7 @@ import sys
 try:
 
     # Save student's sys.path
-    path = sys.path[:]
+    _path = sys.path[:]
 
     # In case student has files that shadow packages
     sys.path = [p for p in sys.path if p not in ("", os.getcwd())]
@@ -25,4 +25,4 @@ try:
 finally:
 
     # Restore student's sys.path (just in case library raised an exception that caller caught)
-    sys.path = path
+    sys.path = _path
