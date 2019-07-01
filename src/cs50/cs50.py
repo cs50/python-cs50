@@ -7,7 +7,7 @@ import sys
 from distutils.sysconfig import get_python_lib
 from os.path import abspath, join
 from termcolor import colored
-from traceback import extract_tb, format_list, format_exception_only, format_exception
+from traceback import format_exception
 
 
 class flushfile():
@@ -43,6 +43,10 @@ def formatException(type, value, tb):
 
     https://stackoverflow.com/a/46071447/5156190
     """
+
+    # Don't print tracebacks for deprecations
+    if type == NotImplementedError:
+        return "".join(format_exception(type, value, None)).rstrip()
 
     # Absolute paths to site-packages
     packages = tuple(join(abspath(p), "") for p in sys.path[1:])
