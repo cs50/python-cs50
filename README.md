@@ -10,11 +10,12 @@ pip install cs50
 
 ## Usage
 
-    import cs50
+```
+import cs50
 
-    ...
+...
 
-    c = cs50.get_char();
-    f = cs50.get_float();
-    i = cs50.get_int();
-    s = cs50.get_string();
+f = cs50.get_float();
+i = cs50.get_int();
+s = cs50.get_string();
+```
