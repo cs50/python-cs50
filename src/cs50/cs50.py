@@ -33,10 +33,6 @@ sys.stderr = _flushfile(sys.stderr)
 sys.stdout = _flushfile(sys.stdout)
 
 
-def eprint(*args, **kwargs):
-    raise RuntimeError("The CS50 Library for Python no longer supports eprint, but you can use print instead!")
-
-
 def _formatException(type, value, tb):
     """
     Format traceback, darkening entries from global site-packages directories
@@ -61,6 +57,10 @@ def _formatException(type, value, tb):
 
 
 sys.excepthook = lambda type, value, tb: print(_formatException(type, value, tb), file=sys.stderr)
+
+
+def eprint(*args, **kwargs):
+    raise RuntimeError("The CS50 Library for Python no longer supports eprint, but you can use print instead!")
 
 
 def get_char(prompt=None):
