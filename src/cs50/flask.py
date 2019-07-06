@@ -42,19 +42,5 @@ try:
                 logging.getLogger("cs50").disabled = disabled
         SQL.execute = _after
 
-    # Add support for Cloud9 proxy so that flask.redirect doesn't redirect from HTTPS to HTTP
-    # http://stackoverflow.com/a/23504684/5156190
-    if getenv("C9_HOSTNAME") and not getenv("IDE_OFFLINE"):
-        try:
-            import flask
-            from werkzeug.contrib.fixers import ProxyFix
-            _before = flask.Flask.__init__
-            def _after(*args, **kwargs):
-                _before(*args, **kwargs)
-                self.wsgi_app = ProxyFix(self.wsgi_app)
-            flask.Flask.__init__ = _after
-        except:
-            pass
-
 except Exception:
     pass
