@@ -4,7 +4,7 @@ from distutils.version import StrictVersion
 from os import getenv
 from pkg_resources import get_distribution
 
-from .cs50 import formatException
+from .cs50 import _formatException
 
 # Try to monkey-patch Flask, if installed
 try:
@@ -18,7 +18,7 @@ try:
     # https://docs.python.org/3/library/logging.html#logging.Formatter.formatException
     try:
         import flask.logging
-        flask.logging.default_handler.formatter.formatException = lambda exc_info: formatException(*exc_info)
+        flask.logging.default_handler.formatter.formatException = lambda exc_info: _formatException(*exc_info)
     except Exception:
         pass
 
