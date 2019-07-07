@@ -63,7 +63,7 @@ def eprint(*args, **kwargs):
     raise RuntimeError("The CS50 Library for Python no longer supports eprint, but you can use print instead!")
 
 
-def get_char(prompt=None):
+def get_char(prompt):
     raise RuntimeError("The CS50 Library for Python no longer supports get_char, but you can use get_string instead!")
 
 
