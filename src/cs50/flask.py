@@ -42,5 +42,19 @@ try:
                 logging.getLogger("cs50").disabled = disabled
         SQL.execute = _after
 
+    # When behind CS50 IDE's proxy, ensure that flask.redirect doesn't redirect from HTTPS to HTTP
+    # https://werkzeug.palletsprojects.com/en/0.15.x/middleware/proxy_fix/#module-werkzeug.middleware.proxy_fix
+    if getenv("C9_HOSTNAME") and not getenv("IDE_OFFLINE"):
+        try:
+            import flask
+            from werkzeug.middleware.proxy_fix import ProxyFix
+            _before = flask.Flask.__init__
+            def _after(*args, **kwargs):
+                _before(*args, **kwargs)
+                self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)
+            flask.Flask.__init__ = _after
+        except:
+            pass
+
 except Exception:
     pass
