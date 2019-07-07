@@ -4,7 +4,7 @@ from distutils.version import StrictVersion
 from os import getenv
 from pkg_resources import get_distribution
 
-from .cs50 import formatException
+from .cs50 import _formatException
 
 # Try to monkey-patch Flask, if installed
 try:
@@ -18,7 +18,7 @@ try:
     # https://docs.python.org/3/library/logging.html#logging.Formatter.formatException
     try:
         import flask.logging
-        flask.logging.default_handler.formatter.formatException = lambda exc_info: formatException(*exc_info)
+        flask.logging.default_handler.formatter.formatException = lambda exc_info: _formatException(*exc_info)
     except Exception:
         pass
 
@@ -42,16 +42,16 @@ try:
                 logging.getLogger("cs50").disabled = disabled
         SQL.execute = _after
 
-    # Add support for Cloud9 proxy so that flask.redirect doesn't redirect from HTTPS to HTTP
-    # http://stackoverflow.com/a/23504684/5156190
+    # When behind CS50 IDE's proxy, ensure that flask.redirect doesn't redirect from HTTPS to HTTP
+    # https://werkzeug.palletsprojects.com/en/0.15.x/middleware/proxy_fix/#module-werkzeug.middleware.proxy_fix
     if getenv("C9_HOSTNAME") and not getenv("IDE_OFFLINE"):
         try:
             import flask
-            from werkzeug.contrib.fixers import ProxyFix
+            from werkzeug.middleware.proxy_fix import ProxyFix
             _before = flask.Flask.__init__
             def _after(*args, **kwargs):
                 _before(*args, **kwargs)
-                self.wsgi_app = ProxyFix(self.wsgi_app)
+                self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)
             flask.Flask.__init__ = _after
         except:
             pass
