@@ -44,7 +44,7 @@ try:
 
     # When behind CS50 IDE's proxy, ensure that flask.redirect doesn't redirect from HTTPS to HTTP
     # https://werkzeug.palletsprojects.com/en/0.15.x/middleware/proxy_fix/#module-werkzeug.middleware.proxy_fix
-    if getenv("C9_HOSTNAME") and not getenv("IDE_OFFLINE"):
+    if getenv("CS50_IDE_TYPE") == "online":
         try:
             import flask
             from werkzeug.middleware.proxy_fix import ProxyFix
