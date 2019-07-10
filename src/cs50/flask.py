@@ -49,7 +49,7 @@ try:
             import flask
             from werkzeug.middleware.proxy_fix import ProxyFix
             _before = flask.Flask.__init__
-            def _after(*args, **kwargs):
+            def _after(self, *args, **kwargs):
                 _before(*args, **kwargs)
                 self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)
             flask.Flask.__init__ = _after
