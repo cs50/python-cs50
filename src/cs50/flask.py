@@ -31,16 +31,16 @@ try:
     except ImportError:
         pass
     else:
-        _before = SQL.execute
-        def _after(*args, **kwargs):
+        _before = SQL.SQL.execute
+        def _after(self, *args, **kwargs):
             disabled = logging.getLogger("cs50").disabled
             if flask.current_app:
                 logging.getLogger("cs50").disabled = False
             try:
-                return _before(*args, **kwargs)
+                return _before(self, *args, **kwargs)
             finally:
                 logging.getLogger("cs50").disabled = disabled
-        SQL.execute = _after
+        SQL.SQL.execute = _after
 
     # When behind CS50 IDE's proxy, ensure that flask.redirect doesn't redirect from HTTPS to HTTP
     # https://werkzeug.palletsprojects.com/en/0.15.x/middleware/proxy_fix/#module-werkzeug.middleware.proxy_fix
