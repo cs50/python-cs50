@@ -215,12 +215,14 @@ class SQL(object):
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
 
+        # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
+            
+            # Raise exceptions for warnings
             warnings.simplefilter("error")
 
             # Prepare, execute statement
             try:
-
 
                 # Execute statement
                 result = self.engine.execute(sqlalchemy.text(statement))
