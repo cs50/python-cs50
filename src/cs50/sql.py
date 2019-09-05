@@ -215,62 +215,63 @@ class SQL(object):
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
 
-        # Raise exceptions for warnings
-        warnings.filterwarnings("error")
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
 
-        # Prepare, execute statement
-        try:
+            # Prepare, execute statement
+            try:
 
-            # Execute statement
-            result = self.engine.execute(sqlalchemy.text(statement))
+
+                # Execute statement
+                result = self.engine.execute(sqlalchemy.text(statement))
+
+                # Return value
+                ret = True
+                if tokens[0].ttype == sqlparse.tokens.Keyword.DML:
+
+                    # Uppercase token's value
+                    value = tokens[0].value.upper()
+
+                    # If SELECT, return result set as list of dict objects
+                    if value == "SELECT":
+
+                        # Coerce any decimal.Decimal objects to float objects
+                        # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
+                        rows = [dict(row) for row in result.fetchall()]
+                        for row in rows:
+                            for column in row:
+                                if type(row[column]) is decimal.Decimal:
+                                    row[column] = float(row[column])
+                        ret = rows
+
+                    # If INSERT, return primary key value for a newly inserted row
+                    elif value == "INSERT":
+                        if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
+                            result = self.engine.execute("SELECT LASTVAL()")
+                            ret = result.first()[0]
+                        else:
+                            ret = result.lastrowid
+
+                    # If DELETE or UPDATE, return number of rows matched
+                    elif value in ["DELETE", "UPDATE"]:
+                        ret = result.rowcount
+
+            # If constraint violated, return None
+            except sqlalchemy.exc.IntegrityError:
+                self._logger.debug(termcolor.colored(statement, "yellow"))
+                return None
+
+            # If user errror
+            except sqlalchemy.exc.OperationalError as e:
+                self._logger.debug(termcolor.colored(statement, "red"))
+                e = RuntimeError(_parse_exception(e))
+                e.__cause__ = None
+                raise e
 
             # Return value
-            ret = True
-            if tokens[0].ttype == sqlparse.tokens.Keyword.DML:
-
-                # Uppercase token's value
-                value = tokens[0].value.upper()
-
-                # If SELECT, return result set as list of dict objects
-                if value == "SELECT":
-
-                    # Coerce any decimal.Decimal objects to float objects
-                    # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
-                    rows = [dict(row) for row in result.fetchall()]
-                    for row in rows:
-                        for column in row:
-                            if type(row[column]) is decimal.Decimal:
-                                row[column] = float(row[column])
-                    ret = rows
-
-                # If INSERT, return primary key value for a newly inserted row
-                elif value == "INSERT":
-                    if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
-                        result = self.engine.execute("SELECT LASTVAL()")
-                        ret = result.first()[0]
-                    else:
-                        ret = result.lastrowid
-
-                # If DELETE or UPDATE, return number of rows matched
-                elif value in ["DELETE", "UPDATE"]:
-                    ret = result.rowcount
-
-        # If constraint violated, return None
-        except sqlalchemy.exc.IntegrityError:
-            self._logger.debug(termcolor.colored(statement, "yellow"))
-            return None
-
-        # If user errror
-        except sqlalchemy.exc.OperationalError as e:
-            self._logger.debug(termcolor.colored(statement, "red"))
-            e = RuntimeError(_parse_exception(e))
-            e.__cause__ = None
-            raise e
-
-        # Return value
-        else:
-            self._logger.debug(termcolor.colored(statement, "green"))
-            return ret
+            else:
+                self._logger.debug(termcolor.colored(statement, "green"))
+                return ret
 
     def _escape(self, value):
         """
