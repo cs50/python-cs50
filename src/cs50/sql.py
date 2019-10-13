@@ -248,10 +248,7 @@ class SQL(object):
 
                     # If INSERT, return primary key value for a newly inserted row
                     elif value == "INSERT":
-                        if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
-                            result = self.engine.execute("SELECT LASTVAL()")
-                            ret = result.first()[0]
-                        else:
+                        if result.lastrowid is not None:
                             ret = result.lastrowid
 
                     # If DELETE or UPDATE, return number of rows matched
