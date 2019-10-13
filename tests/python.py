@@ -13,7 +13,7 @@ def test_get_int():
 
 def test_get_float():
     """
-    Tests the get_ifloat() function
+    Tests the get_float() function
     """
     i = cs50.get_float("Float: ")
     assert type(i) == type(0.0), "get_float() did not return a float"
