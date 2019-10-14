@@ -1,32 +1,44 @@
 import sys
+import unittest
+import logging
+import warnings
+from unittest.mock import patch
 
 sys.path.insert(0, "../src")
 
 import cs50
 
-def test_get_int():
-    """
-    Tests the get_int() function
-    """
-    i = cs50.get_int("Integer: ")
-    assert type(i) == type(0), "get_int() did not return an integer"
+class FunctionTests(unittest.TestCase):
+    
+    @patch("cs50.get_int", return_value=1)
+    def test_get_int(self, input):
+        """
+        Tests the get_int() function
+        """
+        i = cs50.get_int("Integer: ")
+        self.assertIsInstance(i, int)
 
-def test_get_float():
-    """
-    Tests the get_float() function
-    """
-    i = cs50.get_float("Float: ")
-    assert type(i) == type(0.0), "get_float() did not return a float"
+    @patch("cs50.get_float", return_value=1.0)
+    def test_get_float(self, input):
+        """
+        Tests the get_float() function
+        """
+        i = cs50.get_float("Float: ")
+        self.assertIsInstance(i, float)
 
-def test_get_string():
-    """
-    Tests the get_string() function
-    """
-    i = cs50.get_string("String: ")
-    assert type(i) == type(""), "get_string() did not return a string"
+    @patch("cs50.get_string", return_value="1")
+    def test_get_string(self, input):
+        """
+        Tests the get_string() function
+        """
+        i = cs50.get_string("String: ")
+        self.assertIsInstance(i, str)
 
 if __name__ == "__main__":
-    test_get_int()
-    test_get_float()
-    test_get_string()
-    print("All tests passed!")
+    suite = unittest.TestSuite([
+        unittest.TestLoader().loadTestsFromTestCase(FunctionTests)
+    ])
+
+    logging.getLogger("cs50").disabled = True
+    sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())
+    

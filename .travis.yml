@@ -13,7 +13,7 @@ before_script:
   - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
   - psql -c 'create database test;' -U postgres
   - touch test.db test1.db
-script: python tests/sql.py
+script: python tests.py
 deploy:
   - provider: script
     script: 'curl --fail --data "{ \"tag_name\": \"v$(python setup.py --version)\",
