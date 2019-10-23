@@ -283,7 +283,7 @@ class SQL(object):
         """
 
         # Lazily import
-        import sqlalchemy
+        import sqlparse
 
         def __escape(value):
 
