@@ -286,6 +286,8 @@ class SQL(object):
 
             # Lazily import
             import datetime
+            import sqlalchemy
+            import sqlparse
 
             # bool
             if type(value) is bool:
@@ -355,6 +357,9 @@ class SQL(object):
 def _parse_exception(e):
     """Parses an exception, returns its message."""
 
+    # Lazily import
+    import re
+
     # MySQL
     matches = re.search(r"^\(_mysql_exceptions\.OperationalError\) \(\d+, \"(.+)\"\)$", str(e))
     if matches:
@@ -376,6 +381,10 @@ def _parse_exception(e):
 
 def _parse_placeholder(token):
     """Infers paramstyle, name from sqlparse.tokens.Name.Placeholder."""
+
+    # Lazily load
+    import re
+    import sqlparse
 
     # Validate token
     if not isinstance(token, sqlparse.sql.Token) or token.ttype != sqlparse.tokens.Name.Placeholder:
