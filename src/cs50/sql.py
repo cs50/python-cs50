@@ -1,17 +1,3 @@
-import datetime
-import decimal
-import importlib
-import logging
-import os
-import re
-import sqlalchemy
-import sqlite3
-import sqlparse
-import sys
-import termcolor
-import warnings
-
-
 class SQL(object):
     """Wrap SQLAlchemy to provide a simple SQL API."""
 
@@ -24,6 +10,13 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
+
+        # Lazily import
+        import logging
+        import os
+        import re
+        import sqlalchemy
+        import sqlite3
 
         # Get logger
         self._logger = logging.getLogger("cs50")
@@ -73,6 +66,12 @@ class SQL(object):
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
+
+        # Lazily import
+        import decimal
+        import sqlparse
+        import termcolor
+        import warnings
 
         # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
@@ -217,7 +216,7 @@ class SQL(object):
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
-            
+
             # Raise exceptions for warnings
             warnings.simplefilter("error")
 
@@ -283,6 +282,9 @@ class SQL(object):
         """
 
         def __escape(value):
+
+            # Lazily import
+            import datetime
 
             # bool
             if type(value) is bool:
