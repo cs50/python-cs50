@@ -282,12 +282,14 @@ class SQL(object):
         https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
         """
 
+        # Lazily import
+        import sqlalchemy
+
         def __escape(value):
 
             # Lazily import
             import datetime
             import sqlalchemy
-            import sqlparse
 
             # bool
             if type(value) is bool:
