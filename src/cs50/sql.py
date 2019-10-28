@@ -218,7 +218,7 @@ class SQL(object):
 
             # In string literal
             # https://www.sqlite.org/lang_keywords.html
-            if token.ttype == sqlparse.tokens.Literal.String.Single:
+            if token.ttype in [sqlparse.tokens.Literal.String, sqlparse.tokens.Literal.String.Single]:
                 token.value = re.sub("(^'|\s+):", "\\1\\:", token.value)
 
             # In identifier
