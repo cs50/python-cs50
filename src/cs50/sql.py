@@ -69,6 +69,7 @@ class SQL(object):
 
         # Lazily import
         import decimal
+        import re
         import sqlalchemy
         import sqlparse
         import termcolor
