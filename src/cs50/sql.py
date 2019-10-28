@@ -212,12 +212,26 @@ class SQL(object):
                     "value" if len(keys) == 1 else "values",
                     ", ".join(keys)))
 
+        # For SQL statements where a colon is required verbatim, as within an inline string, use a backslash to escape
+        # https://docs.sqlalchemy.org/en/13/core/sqlelement.html?highlight=text#sqlalchemy.sql.expression.text
+        for index, token in enumerate(tokens):
+
+            # In string literal
+            # https://www.sqlite.org/lang_keywords.html
+            if token.ttype == sqlparse.tokens.Literal.String.Single:
+                token.value = re.sub("(^'|\s+):", "\\1\\:", token.value)
+
+            # In identifier
+            # https://www.sqlite.org/lang_keywords.html
+            elif token.ttype == sqlparse.tokens.Literal.String.Symbol:
+                token.value = re.sub("(^\"|\s+):", "\\1\\:", token.value)
+
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
-            
+
             # Raise exceptions for warnings
             warnings.simplefilter("error")
 
