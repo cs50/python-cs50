@@ -92,6 +92,7 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = '  :baz'"), [{"val": "  :baz"}])
         self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = ':bar :baz'"), [{"val": ":bar :baz"}])
         self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = '  :bar :baz'"), [{"val": "  :bar :baz"}])
+        self.assertEqual(self.db.execute('SELECT val FROM cs50 WHERE val = "  :bar :baz"'), [{"val": "  :bar :baz"}])
 
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
