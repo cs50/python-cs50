@@ -75,6 +75,24 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("UPDATE cs50 SET val = 'foo' WHERE id > 1"), 2)
         self.assertEqual(self.db.execute("UPDATE cs50 SET val = 'foo' WHERE id = -50"), 0)
 
+    def test_string_literal_with_colon(self):
+        rows = [
+            {"id": 1, "val": ":foo"},
+            {"id": 2, "val": "foo:bar"},
+            {"id": 3, "val": "  :baz"},
+            {"id": 3, "val": ":bar :baz"},
+            {"id": 3, "val": "  :bar :baz"}
+        ]
+        for row in rows:
+            self.db.execute("INSERT INTO cs50(val) VALUES(:val)", val=row["val"])
+
+        self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = ':foo'"), [{"val": ":foo"}])
+        self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = ':bar'"), [])
+        self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = 'foo:bar'"), [{"val": "foo:bar"}])
+        self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = '  :baz'"), [{"val": "  :baz"}])
+        self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = ':bar :baz'"), [{"val": ":bar :baz"}])
+        self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = '  :bar :baz'"), [{"val": "  :bar :baz"}])
+
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
 

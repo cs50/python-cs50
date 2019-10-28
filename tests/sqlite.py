@@ -31,6 +31,8 @@ db.execute("SELECT * FROM Employee WHERE FirstName = :1 AND LastName = :2", "And
 db.execute("SELECT * FROM Employee WHERE FirstName = :1 AND LastName = :2", ["Andrew", "Adams"])
 db.execute("SELECT * FROM Employee WHERE FirstName = :1 AND LastName = :2", ("Andrew", "Adams"))
 
+db.execute("SELECT * FROM Employee WHERE FirstName = ':Andrew :Adams'")
+
 db.execute("SELECT * FROM Employee WHERE FirstName = :first AND LastName = :last", first="Andrew", last="Adams")
 db.execute("SELECT * FROM Employee WHERE FirstName = :first AND LastName = :last", {"first": "Andrew", "last": "Adams"})
 

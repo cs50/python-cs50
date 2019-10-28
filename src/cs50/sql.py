@@ -1,17 +1,3 @@
-import datetime
-import decimal
-import importlib
-import logging
-import os
-import re
-import sqlalchemy
-import sqlite3
-import sqlparse
-import sys
-import termcolor
-import warnings
-
-
 class SQL(object):
     """Wrap SQLAlchemy to provide a simple SQL API."""
 
@@ -24,6 +10,13 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
+
+        # Lazily import
+        import logging
+        import os
+        import re
+        import sqlalchemy
+        import sqlite3
 
         # Get logger
         self._logger = logging.getLogger("cs50")
@@ -73,6 +66,14 @@ class SQL(object):
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
+
+        # Lazily import
+        import decimal
+        import re
+        import sqlalchemy
+        import sqlparse
+        import termcolor
+        import warnings
 
         # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
@@ -212,65 +213,82 @@ class SQL(object):
                     "value" if len(keys) == 1 else "values",
                     ", ".join(keys)))
 
+        # For SQL statements where a colon is required verbatim, as within an inline string, use a backslash to escape
+        # https://docs.sqlalchemy.org/en/13/core/sqlelement.html?highlight=text#sqlalchemy.sql.expression.text
+        for index, token in enumerate(tokens):
+
+            # In string literal
+            # https://www.sqlite.org/lang_keywords.html
+            if token.ttype in [sqlparse.tokens.Literal.String, sqlparse.tokens.Literal.String.Single]:
+                token.value = re.sub("(^'|\s+):", r"\1\:", token.value)
+
+            # In identifier
+            # https://www.sqlite.org/lang_keywords.html
+            elif token.ttype == sqlparse.tokens.Literal.String.Symbol:
+                token.value = re.sub("(^\"|\s+):", r"\1\:", token.value)
+
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
 
-        # Raise exceptions for warnings
-        warnings.filterwarnings("error")
+        # Catch SQLAlchemy warnings
+        with warnings.catch_warnings():
 
-        # Prepare, execute statement
-        try:
+            # Raise exceptions for warnings
+            warnings.simplefilter("error")
 
-            # Execute statement
-            result = self.engine.execute(sqlalchemy.text(statement))
+            # Prepare, execute statement
+            try:
+
+                # Execute statement
+                result = self.engine.execute(sqlalchemy.text(statement))
+
+                # Return value
+                ret = True
+                if tokens[0].ttype == sqlparse.tokens.Keyword.DML:
+
+                    # Uppercase token's value
+                    value = tokens[0].value.upper()
+
+                    # If SELECT, return result set as list of dict objects
+                    if value == "SELECT":
+
+                        # Coerce any decimal.Decimal objects to float objects
+                        # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
+                        rows = [dict(row) for row in result.fetchall()]
+                        for row in rows:
+                            for column in row:
+                                if type(row[column]) is decimal.Decimal:
+                                    row[column] = float(row[column])
+                        ret = rows
+
+                    # If INSERT, return primary key value for a newly inserted row
+                    elif value == "INSERT":
+                        if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
+                            result = self.engine.execute("SELECT LASTVAL()")
+                            ret = result.first()[0]
+                        else:
+                            ret = result.lastrowid
+
+                    # If DELETE or UPDATE, return number of rows matched
+                    elif value in ["DELETE", "UPDATE"]:
+                        ret = result.rowcount
+
+            # If constraint violated, return None
+            except sqlalchemy.exc.IntegrityError:
+                self._logger.debug(termcolor.colored(statement, "yellow"))
+                return None
+
+            # If user errror
+            except sqlalchemy.exc.OperationalError as e:
+                self._logger.debug(termcolor.colored(statement, "red"))
+                e = RuntimeError(_parse_exception(e))
+                e.__cause__ = None
+                raise e
 
             # Return value
-            ret = True
-            if tokens[0].ttype == sqlparse.tokens.Keyword.DML:
-
-                # Uppercase token's value
-                value = tokens[0].value.upper()
-
-                # If SELECT, return result set as list of dict objects
-                if value == "SELECT":
-
-                    # Coerce any decimal.Decimal objects to float objects
-                    # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
-                    rows = [dict(row) for row in result.fetchall()]
-                    for row in rows:
-                        for column in row:
-                            if type(row[column]) is decimal.Decimal:
-                                row[column] = float(row[column])
-                    ret = rows
-
-                # If INSERT, return primary key value for a newly inserted row
-                elif value == "INSERT":
-                    if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
-                        result = self.engine.execute("SELECT LASTVAL()")
-                        ret = result.first()[0]
-                    else:
-                        ret = result.lastrowid
-
-                # If DELETE or UPDATE, return number of rows matched
-                elif value in ["DELETE", "UPDATE"]:
-                    ret = result.rowcount
-
-        # If constraint violated, return None
-        except sqlalchemy.exc.IntegrityError:
-            self._logger.debug(termcolor.colored(statement, "yellow"))
-            return None
-
-        # If user errror
-        except sqlalchemy.exc.OperationalError as e:
-            self._logger.debug(termcolor.colored(statement, "red"))
-            e = RuntimeError(_parse_exception(e))
-            e.__cause__ = None
-            raise e
-
-        # Return value
-        else:
-            self._logger.debug(termcolor.colored(statement, "green"))
-            return ret
+            else:
+                self._logger.debug(termcolor.colored(statement, "green"))
+                return ret
 
     def _escape(self, value):
         """
@@ -279,7 +297,14 @@ class SQL(object):
         https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
         """
 
+        # Lazily import
+        import sqlparse
+
         def __escape(value):
+
+            # Lazily import
+            import datetime
+            import sqlalchemy
 
             # bool
             if type(value) is bool:
@@ -349,6 +374,9 @@ class SQL(object):
 def _parse_exception(e):
     """Parses an exception, returns its message."""
 
+    # Lazily import
+    import re
+
     # MySQL
     matches = re.search(r"^\(_mysql_exceptions\.OperationalError\) \(\d+, \"(.+)\"\)$", str(e))
     if matches:
@@ -370,6 +398,10 @@ def _parse_exception(e):
 
 def _parse_placeholder(token):
     """Infers paramstyle, name from sqlparse.tokens.Name.Placeholder."""
+
+    # Lazily load
+    import re
+    import sqlparse
 
     # Validate token
     if not isinstance(token, sqlparse.sql.Token) or token.ttype != sqlparse.tokens.Name.Placeholder:
