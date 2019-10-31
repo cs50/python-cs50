@@ -3,6 +3,9 @@ import pkgutil
 import sys
 
 def _wrap_flask(f):
+    if f is None:
+        return
+
     from distutils.version import StrictVersion
     from .cs50 import _formatException
 
@@ -27,10 +30,11 @@ if "flask" in sys.modules:
 # Flask wasn't imported
 else:
     flask_loader = pkgutil.get_loader('flask')
-    _exec_module_before = flask_loader.exec_module
+    if flask_loader:
+        _exec_module_before = flask_loader.exec_module
 
-    def _exec_module_after(*args, **kwargs):
-        _exec_module_before(*args, **kwargs)
-        _wrap_flask(sys.modules["flask"])
+        def _exec_module_after(*args, **kwargs):
+            _exec_module_before(*args, **kwargs)
+            _wrap_flask(sys.modules["flask"])
 
-    flask_loader.exec_module = _exec_module_after
+        flask_loader.exec_module = _exec_module_after

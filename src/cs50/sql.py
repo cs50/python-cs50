@@ -4,7 +4,10 @@ def _enable_logging(f):
 
     @functools.wraps(f)
     def decorator(*args, **kwargs):
-        import flask
+        try:
+            import flask
+        except ModuleNotFoundError:
+            return f(*args, **kwargs)
 
         disabled = logging.getLogger("cs50").disabled
         if flask.current_app:
