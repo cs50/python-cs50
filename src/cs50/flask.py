@@ -4,11 +4,11 @@ import sys
 
 def _wrap_flask(f):
     from distutils.version import StrictVersion
+    from .cs50 import _formatException
 
     if f.__version__ < StrictVersion("1.0"):
         return
 
-    from .cs50 import _formatException
     f.logging.default_handler.formatter.formatException = lambda exc_info: _formatException(*exc_info)
 
     if os.getenv("CS50_IDE_TYPE") == "online":
