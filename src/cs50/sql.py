@@ -75,7 +75,7 @@ class SQL(object):
         import termcolor
         import warnings
 
-        # Parse statement, stripping comments
+        # Parse statement, stripping comments and then leading/trailing whitespace
         statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True).strip())
 
         # Allow only one statement at a time, since SQLite doesn't support multiple
