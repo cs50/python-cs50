@@ -63,6 +63,12 @@ class SQLTests(unittest.TestCase):
 
         self.assertEqual(self.db.execute("SELECT * FROM cs50 WHERE id = :id OR val = :val", id=rows[1]["id"], val=rows[2]["val"]), rows[1:3])
 
+    def test_select_with_comments(self):
+        self.assertEqual(self.db.execute("--comment\nSELECT * FROM cs50;\n--comment"), [])
+
+    def test_select_with_semicolon(self):
+        self.assertEqual(self.db.execute("SELECT * FROM cs50;\n--comment"), [])
+
     def test_update_returns_affected_rows(self):
         rows = [
             {"id": 1, "val": "foo"},
