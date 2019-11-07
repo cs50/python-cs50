@@ -66,7 +66,7 @@ class SQL(object):
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
-        
+
         # Lazily import
         import decimal
         import re
