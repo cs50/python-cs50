@@ -74,9 +74,11 @@ class SQL(object):
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
 
+        # Parse statement, stripping comments
+        statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True))
+
         # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
-        statements = sqlparse.parse(sql)
         if len(statements) > 1:
             raise RuntimeError("too many statements at once")
         elif len(statements) == 0:
@@ -217,7 +219,7 @@ class SQL(object):
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
-            
+
             # Raise exceptions for warnings
             warnings.simplefilter("error")
 
