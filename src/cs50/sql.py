@@ -75,7 +75,7 @@ class SQL(object):
         """Execute a SQL statement."""
 
         # Parse statement, stripping comments
-        statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True))
+        statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True).strip())
 
         # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
