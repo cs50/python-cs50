@@ -1,17 +1,3 @@
-import datetime
-import decimal
-import importlib
-import logging
-import os
-import re
-import sqlalchemy
-import sqlite3
-import sqlparse
-import sys
-import termcolor
-import warnings
-
-
 class SQL(object):
     """Wrap SQLAlchemy to provide a simple SQL API."""
 
@@ -24,6 +10,13 @@ class SQL(object):
         http://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
         http://docs.sqlalchemy.org/en/latest/dialects/index.html
         """
+
+        # Lazily import
+        import logging
+        import os
+        import re
+        import sqlalchemy
+        import sqlite3
 
         # Get logger
         self._logger = logging.getLogger("cs50")
@@ -73,6 +66,14 @@ class SQL(object):
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
+        
+        # Lazily import
+        import decimal
+        import re
+        import sqlalchemy
+        import sqlparse
+        import termcolor
+        import warnings
 
         # Parse statement, stripping comments
         statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True).strip())
@@ -214,6 +215,20 @@ class SQL(object):
                     "value" if len(keys) == 1 else "values",
                     ", ".join(keys)))
 
+        # For SQL statements where a colon is required verbatim, as within an inline string, use a backslash to escape
+        # https://docs.sqlalchemy.org/en/13/core/sqlelement.html?highlight=text#sqlalchemy.sql.expression.text
+        for index, token in enumerate(tokens):
+
+            # In string literal
+            # https://www.sqlite.org/lang_keywords.html
+            if token.ttype in [sqlparse.tokens.Literal.String, sqlparse.tokens.Literal.String.Single]:
+                token.value = re.sub("(^'|\s+):", r"\1\:", token.value)
+
+            # In identifier
+            # https://www.sqlite.org/lang_keywords.html
+            elif token.ttype == sqlparse.tokens.Literal.String.Symbol:
+                token.value = re.sub("(^\"|\s+):", r"\1\:", token.value)
+
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
 
@@ -284,7 +299,14 @@ class SQL(object):
         https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
         """
 
+        # Lazily import
+        import sqlparse
+
         def __escape(value):
+
+            # Lazily import
+            import datetime
+            import sqlalchemy
 
             # bool
             if type(value) is bool:
@@ -354,6 +376,9 @@ class SQL(object):
 def _parse_exception(e):
     """Parses an exception, returns its message."""
 
+    # Lazily import
+    import re
+
     # MySQL
     matches = re.search(r"^\(_mysql_exceptions\.OperationalError\) \(\d+, \"(.+)\"\)$", str(e))
     if matches:
@@ -375,6 +400,10 @@ def _parse_exception(e):
 
 def _parse_placeholder(token):
     """Infers paramstyle, name from sqlparse.tokens.Name.Placeholder."""
+
+    # Lazily load
+    import re
+    import sqlparse
 
     # Validate token
     if not isinstance(token, sqlparse.sql.Token) or token.ttype != sqlparse.tokens.Name.Placeholder:
