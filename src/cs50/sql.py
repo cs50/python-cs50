@@ -75,9 +75,11 @@ class SQL(object):
         import termcolor
         import warnings
 
+        # Parse statement, stripping comments and then leading/trailing whitespace
+        statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True).strip())
+
         # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
-        statements = sqlparse.parse(sql)
         if len(statements) > 1:
             raise RuntimeError("too many statements at once")
         elif len(statements) == 0:
