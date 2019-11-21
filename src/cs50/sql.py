@@ -29,20 +29,16 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-            # Remember foreign_keys and remove it from kwargs
-            foreign_keys = kwargs.pop("foreign_keys", False)
-
             # Create engine, raising exception if back end's module not installed
             self.engine = sqlalchemy.create_engine(url, **kwargs)
 
             # Enable foreign key constraints
-            if foreign_keys:
-                def connect(dbapi_connection, connection_record):
-                    if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
-                        cursor = dbapi_connection.cursor()
-                        cursor.execute("PRAGMA foreign_keys=ON")
-                        cursor.close()
-                sqlalchemy.event.listen(self.engine, "connect", connect)
+            def connect(dbapi_connection, connection_record):
+                if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                    cursor.close()
+            sqlalchemy.event.listen(self.engine, "connect", connect)
 
         else:
 
