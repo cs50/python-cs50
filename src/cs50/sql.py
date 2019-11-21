@@ -263,13 +263,13 @@ class SQL(object):
                                     row[column] = float(row[column])
                         ret = rows
 
-                    # If INSERT, return primary key value for a newly inserted row
+                    # If INSERT, return primary key value for a newly inserted row (or None if none)
                     elif value == "INSERT":
                         if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
                             result = self.engine.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
                         else:
-                            ret = result.lastrowid
+                            ret = result.lastrowid if result.lastrowid > 0 else None
 
                     # If DELETE or UPDATE, return number of rows matched
                     elif value in ["DELETE", "UPDATE"]:
