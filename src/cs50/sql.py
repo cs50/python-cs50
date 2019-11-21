@@ -276,14 +276,15 @@ class SQL(object):
                         ret = result.rowcount
 
             # If constraint violated, return None
-            except sqlalchemy.exc.IntegrityError:
+            except sqlalchemy.exc.IntegrityError as e:
                 self._logger.debug(termcolor.colored(statement, "yellow"))
+                self._logger.debug(e.orig)
                 return None
 
             # If user errror
             except sqlalchemy.exc.OperationalError as e:
                 self._logger.debug(termcolor.colored(statement, "red"))
-                e = RuntimeError(_parse_exception(e))
+                e = RuntimeError(e.orig)
                 e.__cause__ = None
                 raise e
 
