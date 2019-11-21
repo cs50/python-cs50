@@ -278,8 +278,9 @@ class SQL(object):
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
                 self._logger.debug(termcolor.colored(statement, "yellow"))
-                self._logger.debug(e.orig)
-                return None
+                e = RuntimeError(e.orig)
+                e.__cause__ = None
+                raise e
 
             # If user errror
             except sqlalchemy.exc.OperationalError as e:
