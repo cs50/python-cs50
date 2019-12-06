@@ -1,60 +1,40 @@
-import logging
+import os
+import pkgutil
+import sys
 
-from distutils.version import StrictVersion
-from pkg_resources import get_distribution
+def _wrap_flask(f):
+    if f is None:
+        return
 
-from .cs50 import _formatException
+    from distutils.version import StrictVersion
+    from .cs50 import _formatException
 
-# Try to monkey-patch Flask, if installed
-try:
+    if f.__version__ < StrictVersion("1.0"):
+        return
 
-    # Only patch >= 1.0
-    _version = StrictVersion(get_distribution("flask").version)
-    assert _version >= StrictVersion("1.0")
+    f.logging.default_handler.formatter.formatException = lambda exc_info: _formatException(*exc_info)
 
-    # Reformat logger's exceptions
-    # http://flask.pocoo.org/docs/1.0/logging/
-    # https://docs.python.org/3/library/logging.html#logging.Formatter.formatException
-    try:
-        import flask.logging
-        flask.logging.default_handler.formatter.formatException = lambda exc_info: _formatException(*exc_info)
-    except Exception:
-        pass
+    if os.getenv("CS50_IDE_TYPE") == "online":
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        _flask_init_before = f.Flask.__init__
+        def _flask_init_after(self, *args, **kwargs):
+            _flask_init_before(self, *args, **kwargs)
+            self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)
+        f.Flask.__init__ = _flask_init_after
 
-    # Enable logging when Flask is in use,
-    # monkey-patching own SQL module, which shouldn't need to know about Flask
-    logging.getLogger("cs50").disabled = True
-    try:
-        import flask
-        from .sql import SQL
-    except ImportError:
-        pass
-    else:
-        _execute_before = SQL.execute
-        def _execute_after(*args, **kwargs):
-            disabled = logging.getLogger("cs50").disabled
-            if flask.current_app:
-                logging.getLogger("cs50").disabled = False
-            try:
-                return _execute_before(*args, **kwargs)
-            finally:
-                logging.getLogger("cs50").disabled = disabled
-        SQL.execute = _execute_after
 
-    # When behind CS50 IDE's proxy, ensure that flask.redirect doesn't redirect from HTTPS to HTTP
-    # https://werkzeug.palletsprojects.com/en/0.15.x/middleware/proxy_fix/#module-werkzeug.middleware.proxy_fix
-    from os import getenv
-    if getenv("CS50_IDE_TYPE") == "online":
-        try:
-            import flask
-            from werkzeug.middleware.proxy_fix import ProxyFix
-            _flask_init_before = flask.Flask.__init__
-            def _flask_init_after(self, *args, **kwargs):
-                _flask_init_before(self, *args, **kwargs)
-                self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)
-            flask.Flask.__init__ = _flask_init_after
-        except:
-            pass
+# Flask was imported before cs50
+if "flask" in sys.modules:
+    _wrap_flask(sys.modules["flask"])
 
-except Exception:
-    pass
+# Flask wasn't imported
+else:
+    flask_loader = pkgutil.get_loader('flask')
+    if flask_loader:
+        _exec_module_before = flask_loader.exec_module
+
+        def _exec_module_after(*args, **kwargs):
+            _exec_module_before(*args, **kwargs)
+            _wrap_flask(sys.modules["flask"])
+
+        flask_loader.exec_module = _exec_module_after

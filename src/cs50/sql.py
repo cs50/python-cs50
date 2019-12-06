@@ -1,3 +1,25 @@
+def _enable_logging(f):
+    import logging
+    import functools
+
+    @functools.wraps(f)
+    def decorator(*args, **kwargs):
+        try:
+            import flask
+        except ModuleNotFoundError:
+            return f(*args, **kwargs)
+
+        disabled = logging.getLogger("cs50").disabled
+        if flask.current_app:
+            logging.getLogger("cs50").disabled = False
+        try:
+            return f(*args, **kwargs)
+        finally:
+            logging.getLogger("cs50").disabled = disabled
+
+    return decorator
+
+
 class SQL(object):
     """Wrap SQLAlchemy to provide a simple SQL API."""
 
@@ -64,6 +86,7 @@ class SQL(object):
         finally:
             self._logger.disabled = disabled
 
+    @_enable_logging
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
 
