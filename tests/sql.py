@@ -135,7 +135,7 @@ class PostgresTests(SQLTests):
         self.db = SQL("postgresql://postgres@localhost/test")
 
     def setUp(self):
-        self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BLOB)")
+        self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
 
 class SQLiteTests(SQLTests):
     @classmethod
