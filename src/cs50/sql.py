@@ -254,7 +254,6 @@ class SQL(object):
 
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
-        _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
@@ -264,6 +263,9 @@ class SQL(object):
 
             # Prepare, execute statement
             try:
+
+                # Join tokens into statement, abbreviating binary data as <class 'bytes'>
+                _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
                 # Execute statement
                 result = self.engine.execute(sqlalchemy.text(statement))
