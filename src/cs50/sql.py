@@ -339,7 +339,7 @@ class SQL(object):
 
             # bytearray, bytes
             elif type(value) in [bytearray, bytes]:
-                raise RuntimeError("unsupported value")  # TODO
+                return f"x'{value.hex()}'"
 
             # datetime.date
             elif type(value) is datetime.date:
