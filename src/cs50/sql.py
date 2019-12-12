@@ -254,6 +254,7 @@ class SQL(object):
 
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
+        _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
@@ -300,19 +301,19 @@ class SQL(object):
 
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError:
-                self._logger.debug(termcolor.colored(statement, "yellow"))
+                self._logger.debug(termcolor.colored(_statement, "yellow"))
                 return None
 
             # If user errror
             except sqlalchemy.exc.OperationalError as e:
-                self._logger.debug(termcolor.colored(statement, "red"))
+                self._logger.debug(termcolor.colored(_statement, "red"))
                 e = RuntimeError(_parse_exception(e))
                 e.__cause__ = None
                 raise e
 
             # Return value
             else:
-                self._logger.debug(termcolor.colored(statement, "green"))
+                self._logger.debug(termcolor.colored(_statement, "green"))
                 return ret
 
     def _escape(self, value):
@@ -339,10 +340,10 @@ class SQL(object):
 
             # bytearray, bytes
             elif type(value) in [bytearray, bytes]:
-                if self.engine.url.get_backend_name() in ["mysql", "sqlite"]:  # https://dev.mysql.com/doc/refman/8.0/en/hexadecimal-literals.html
-                    return f"x'{value.hex()}'"
-                elif self.engine.url.get_backend_name() == "postgresql":  # https://dba.stackexchange.com/a/203359
-                    return f"'\\x{value.hex()}'"
+                if self.engine.url.get_backend_name() in ["mysql", "sqlite"]:
+                    return sqlparse.sql.Token(sqlparse.tokens.Other, f"x'{value.hex()}'")  # https://dev.mysql.com/doc/refman/8.0/en/hexadecimal-literals.html
+                elif self.engine.url.get_backend_name() == "postgresql":
+                    return sqlparse.sql.Token(sqlparse.tokens.Other, f"'\\x{value.hex()}'")  # https://dba.stackexchange.com/a/203359
                 else:
                     raise RuntimeError("unsupported value: {}".format(value))
 
@@ -394,11 +395,9 @@ class SQL(object):
 
         # Escape value(s), separating with commas as needed
         if type(value) in [list, tuple]:
-            return sqlparse.sql.TokenList(sqlparse.parse(", ".join([str(__escape(v)) for v in value])))
+            return sqlparse.sql.TokenList([__escape(v) for v in value])
         else:
-            return sqlparse.sql.Token(
-                sqlparse.tokens.String,
-                __escape(value))
+            return __escape(value)
 
 
 def _parse_exception(e):
