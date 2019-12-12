@@ -339,7 +339,12 @@ class SQL(object):
 
             # bytearray, bytes
             elif type(value) in [bytearray, bytes]:
-                return f"x'{value.hex()}'"
+                if self.engine.url.get_backend_name() in ["mysql", "sqlite"]:  # https://dev.mysql.com/doc/refman/8.0/en/hexadecimal-literals.html
+                    return f"x'{value.hex()}'"
+                elif self.engine.url.get_backend_name() == "postgresql":  # https://dba.stackexchange.com/a/203359
+                    return f"'\\x{value.hex()}'"
+                else:
+                    raise RuntimeError("unsupported value: {}".format(value))
 
             # datetime.date
             elif type(value) is datetime.date:
