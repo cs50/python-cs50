@@ -295,8 +295,11 @@ class SQL(object):
                     # If INSERT, return primary key value for a newly inserted row
                     elif value == "INSERT":
                         if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
+                            """
                             result = self.connection.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
+                            """
+                            return None
                         else:
                             ret = result.lastrowid
 
