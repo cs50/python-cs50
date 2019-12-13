@@ -71,6 +71,9 @@ class SQL(object):
             # Create engine, raising exception if back end's module not installed
             self.engine = sqlalchemy.create_engine(url, implicit_returning=True, **kwargs)
 
+        # Create connection
+        self.connection = self.engine.connect()
+
         # Log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
 
@@ -268,7 +271,7 @@ class SQL(object):
                 _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
                 # Execute statement
-                result = self.engine.execute(sqlalchemy.text(statement))
+                result = self.connection.execute(sqlalchemy.text(statement))
 
                 # Return value
                 ret = True
@@ -292,7 +295,7 @@ class SQL(object):
                     # If INSERT, return primary key value for a newly inserted row
                     elif value == "INSERT":
                         if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
-                            result = self.engine.execute("SELECT LASTVAL()")
+                            result = self.connection.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
                         else:
                             ret = result.lastrowid
