@@ -55,7 +55,7 @@ class SQL(object):
             foreign_keys = kwargs.pop("foreign_keys", False)
 
             # Create engine, raising exception if back end's module not installed
-            self.engine = sqlalchemy.create_engine(url, **kwargs)
+            self.engine = sqlalchemy.create_engine(url, implicit_returning=True, **kwargs)
 
             # Enable foreign key constraints
             if foreign_keys:
@@ -69,7 +69,7 @@ class SQL(object):
         else:
 
             # Create engine, raising exception if back end's module not installed
-            self.engine = sqlalchemy.create_engine(url, **kwargs)
+            self.engine = sqlalchemy.create_engine(url, implicit_returning=True, **kwargs)
 
         # Log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
