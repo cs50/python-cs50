@@ -59,7 +59,7 @@ class SQL(object):
             self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
 
             # Listen for connections
-            def do_connect(dbapi_connection, connection_record):
+            def connect(dbapi_connection, connection_record):
 
                 # Disable underlying API's own emitting of BEGIN and COMMIT
                 dbapi_connection.isolation_level = None
@@ -69,7 +69,7 @@ class SQL(object):
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA foreign_keys=ON")
                     cursor.close()
-            sqlalchemy.event.listen(self._engine, "connect", do_connect)
+            sqlalchemy.event.listen(self._engine, "connect", connect)
 
         else:
 
@@ -305,7 +305,7 @@ class SQL(object):
                         # Rows to be returned
                         ret = rows
 
-                    # If INSERT, return primary key value for a newly inserted row
+                    # If INSERT, return primary key value for a newly inserted row (or None if none)
                     elif value == "INSERT":
                         if self._engine.url.get_backend_name() in ["postgres", "postgresql"]:
                             try:
@@ -314,21 +314,23 @@ class SQL(object):
                             except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
                                 ret = None
                         else:
-                            ret = result.lastrowid
+                            ret = result.lastrowid if result.lastrowid > 0 else None
 
                     # If DELETE or UPDATE, return number of rows matched
                     elif value in ["DELETE", "UPDATE"]:
                         ret = result.rowcount
 
             # If constraint violated, return None
-            except sqlalchemy.exc.IntegrityError:
-                self._logger.debug(termcolor.colored(_statement, "yellow"))
-                return None
+            except sqlalchemy.exc.IntegrityError as e:
+                self._logger.debug(termcolor.colored(statement, "yellow"))
+                e = RuntimeError(e.orig)
+                e.__cause__ = None
+                raise e
 
             # If user errror
             except sqlalchemy.exc.OperationalError as e:
-                self._logger.debug(termcolor.colored(_statement, "red"))
-                e = RuntimeError(_parse_exception(e))
+                self._logger.debug(termcolor.colored(statement, "red"))
+                e = RuntimeError(e.orig)
                 e.__cause__ = None
                 raise e
 
