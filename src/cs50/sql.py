@@ -292,8 +292,11 @@ class SQL(object):
                     # If INSERT, return primary key value for a newly inserted row
                     elif value == "INSERT":
                         if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
-                            result = self.engine.execute("SELECT LASTVAL()")
-                            ret = result.first()[0]
+                            try:
+                                result = self.engine.execute("SELECT LASTVAL()")
+                                ret = result.first()[0]
+                            except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
+                                ret = None
                         else:
                             ret = result.lastrowid
 
