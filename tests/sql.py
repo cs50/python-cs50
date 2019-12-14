@@ -101,6 +101,8 @@ class SQLTests(unittest.TestCase):
 
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
+        self.db.execute("DROP TABLE IF EXISTS foo")
+        self.db.execute("DROP TABLE IF EXISTS bar")
 
     @classmethod
     def tearDownClass(self):
@@ -132,29 +134,27 @@ class SQLiteTests(SQLTests):
     def setUpClass(self):
         open("test.db", "w").close()
         self.db = SQL("sqlite:///test.db")
-        open("test1.db", "w").close()
-        self.db1 = SQL("sqlite:///test1.db", foreign_keys=True)
 
     def setUp(self):
-        self.db.execute("DROP TABLE IF EXISTS cs50")
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
 
-    def test_foreign_key_support(self):
-        self.db.execute("DROP TABLE IF EXISTS foo")
+    def test_lastrowid(self):
+        self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY AUTOINCREMENT, firstname TEXT, lastname TEXT)")
+        self.assertEqual(self.db.execute("INSERT INTO foo (firstname, lastname) VALUES('firstname', 'lastname')"), 1)
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')")
+        self.assertEqual(self.db.execute("INSERT OR IGNORE INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')"), None)
+
+    def test_integrity_constraints(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
-        self.db.execute("DROP TABLE IF EXISTS bar")
+        self.assertEqual(self.db.execute("INSERT INTO foo VALUES(1)"), 1)
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES(1)")
+
+    def test_foreign_key_support(self):
+        self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
         self.db.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
-        self.assertEqual(self.db.execute("INSERT INTO bar VALUES(50)"), 1)
-
-        self.db1.execute("DROP TABLE IF EXISTS foo")
-        self.db1.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
-        self.db1.execute("DROP TABLE IF EXISTS bar")
-        self.db1.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
-        self.assertEqual(self.db1.execute("INSERT INTO bar VALUES(50)"), None)
-
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO bar VALUES(50)")
 
     def test_qmark(self):
-        self.db.execute("DROP TABLE IF EXISTS foo")
         self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
 
         self.db.execute("INSERT INTO foo VALUES (?, 'bar')", "baz")
@@ -188,7 +188,6 @@ class SQLiteTests(SQLTests):
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
-        self.db.execute("DROP TABLE IF EXISTS bar")
         self.db.execute("CREATE TABLE bar (firstname STRING)")
         self.db.execute("INSERT INTO bar VALUES (?)", "baz")
         self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
@@ -203,7 +202,6 @@ class SQLiteTests(SQLTests):
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", 'bar', baz='baz')
 
     def test_named(self):
-        self.db.execute("DROP TABLE IF EXISTS foo")
         self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
 
         self.db.execute("INSERT INTO foo VALUES (:baz, 'bar')", baz="baz")
@@ -226,7 +224,6 @@ class SQLiteTests(SQLTests):
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
-        self.db.execute("DROP TABLE IF EXISTS bar")
         self.db.execute("CREATE TABLE bar (firstname STRING)")
         self.db.execute("INSERT INTO bar VALUES (:baz)", baz="baz")
         self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
@@ -238,7 +235,6 @@ class SQLiteTests(SQLTests):
 
 
     def test_numeric(self):
-        self.db.execute("DROP TABLE IF EXISTS foo")
         self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
 
         self.db.execute("INSERT INTO foo VALUES (:1, 'bar')", "baz")
@@ -272,7 +268,6 @@ class SQLiteTests(SQLTests):
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
-        self.db.execute("DROP TABLE IF EXISTS bar")
         self.db.execute("CREATE TABLE bar (firstname STRING)")
         self.db.execute("INSERT INTO bar VALUES (:1)", "baz")
         self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])

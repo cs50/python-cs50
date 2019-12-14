@@ -51,20 +51,16 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-            # Remember foreign_keys and remove it from kwargs
-            foreign_keys = kwargs.pop("foreign_keys", False)
-
             # Create engine, raising exception if back end's module not installed
             self.engine = sqlalchemy.create_engine(url, **kwargs)
 
             # Enable foreign key constraints
-            if foreign_keys:
-                def connect(dbapi_connection, connection_record):
-                    if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
-                        cursor = dbapi_connection.cursor()
-                        cursor.execute("PRAGMA foreign_keys=ON")
-                        cursor.close()
-                sqlalchemy.event.listen(self.engine, "connect", connect)
+            def connect(dbapi_connection, connection_record):
+                if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
+                    cursor = dbapi_connection.cursor()
+                    cursor.execute("PRAGMA foreign_keys=ON")
+                    cursor.close()
+            sqlalchemy.event.listen(self.engine, "connect", connect)
 
         else:
 
@@ -286,27 +282,29 @@ class SQL(object):
                                     row[column] = float(row[column])
                         ret = rows
 
-                    # If INSERT, return primary key value for a newly inserted row
+                    # If INSERT, return primary key value for a newly inserted row (or None if none)
                     elif value == "INSERT":
                         if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
                             result = self.engine.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
                         else:
-                            ret = result.lastrowid
+                            ret = result.lastrowid if result.lastrowid > 0 else None
 
                     # If DELETE or UPDATE, return number of rows matched
                     elif value in ["DELETE", "UPDATE"]:
                         ret = result.rowcount
 
             # If constraint violated, return None
-            except sqlalchemy.exc.IntegrityError:
+            except sqlalchemy.exc.IntegrityError as e:
                 self._logger.debug(termcolor.colored(statement, "yellow"))
-                return None
+                e = RuntimeError(e.orig)
+                e.__cause__ = None
+                raise e
 
             # If user errror
             except sqlalchemy.exc.OperationalError as e:
                 self._logger.debug(termcolor.colored(statement, "red"))
-                e = RuntimeError(_parse_exception(e))
+                e = RuntimeError(e.orig)
                 e.__cause__ = None
                 raise e
 
