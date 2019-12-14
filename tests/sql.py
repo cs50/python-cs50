@@ -109,8 +109,8 @@ class SQLTests(unittest.TestCase):
             self.db.execute("INSERT INTO cs50(bin) VALUES(:bin)", bin=row["bin"])
         self.assertEqual(self.db.execute("SELECT id, bin FROM cs50"), rows)
 
-    def test_ccc(self):
-        self.db.execute("BEGIN TRANSACTION")
+    def test_commit(self):
+        self.db.execute("BEGIN")
         self.db.execute("INSERT INTO cs50 (val) VALUES('foo')")
         self.db.execute("COMMIT")
         self.assertEqual(self.db.execute("SELECT val FROM cs50"), [{"val": "foo"}])
