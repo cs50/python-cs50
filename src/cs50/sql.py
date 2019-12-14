@@ -388,8 +388,8 @@ class SQL(object):
                     sqlparse.tokens.Number,
                     sqlalchemy.types.Boolean().literal_processor(self._engine.dialect)(value))
 
-            # bytearray, bytes
-            elif type(value) in [bytearray, bytes]:
+            # bytes
+            elif type(value) is bytes:
                 if self._engine.url.get_backend_name() in ["mysql", "sqlite"]:
                     return sqlparse.sql.Token(sqlparse.tokens.Other, f"x'{value.hex()}'")  # https://dev.mysql.com/doc/refman/8.0/en/hexadecimal-literals.html
                 elif self._engine.url.get_backend_name() == "postgresql":
