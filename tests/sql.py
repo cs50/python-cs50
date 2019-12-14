@@ -106,7 +106,7 @@ class SQLTests(unittest.TestCase):
             {"id": 3, "bin": b"\2"}
         ]
         for row in rows:
-            self.db.execute("INSERT INTO cs50(bin) VALUES(:bin)", id=row["id"], bin=row["bin"])
+            self.db.execute("INSERT INTO cs50(bin) VALUES(:bin)", bin=row["bin"])
         self.assertEqual(self.db.execute("SELECT id, bin FROM cs50"), rows)
 
     def tearDown(self):
