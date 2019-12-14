@@ -69,6 +69,12 @@ class SQLTests(unittest.TestCase):
     def test_select_with_semicolon(self):
         self.assertEqual(self.db.execute("SELECT * FROM cs50;\n--comment"), [])
 
+    def test_select_with_comments(self):
+        self.assertEqual(self.db.execute("--comment\nSELECT * FROM cs50;\n--comment"), [])
+
+    def test_select_with_semicolon(self):
+        self.assertEqual(self.db.execute("SELECT * FROM cs50;\n--comment"), [])
+
     def test_update_returns_affected_rows(self):
         rows = [
             {"id": 1, "val": "foo"},
