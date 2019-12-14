@@ -109,6 +109,12 @@ class SQLTests(unittest.TestCase):
             self.db.execute("INSERT INTO cs50(bin) VALUES(:bin)", bin=row["bin"])
         self.assertEqual(self.db.execute("SELECT id, bin FROM cs50"), rows)
 
+    def test_ccc(self):
+        self.db.execute("BEGIN TRANSACTION")
+        self.db.execute("INSERT INTO cs50 (val) VALUES('foo')")
+        self.db.execute("COMMIT")
+        self.assertEqual(self.db.execute("SELECT val FROM cs50"), [{"val": "foo"}])
+
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
 
@@ -143,7 +149,7 @@ class SQLiteTests(SQLTests):
         open("test.db", "w").close()
         self.db = SQL("sqlite:///test.db")
         open("test1.db", "w").close()
-        self.db1 = SQL("sqlite:///test1.db", foreign_keys=True)
+        self.db1 = SQL("sqlite:///test1.db")
 
     def setUp(self):
         self.db.execute("DROP TABLE IF EXISTS cs50")
@@ -161,7 +167,6 @@ class SQLiteTests(SQLTests):
         self.db1.execute("DROP TABLE IF EXISTS bar")
         self.db1.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
         self.assertEqual(self.db1.execute("INSERT INTO bar VALUES(50)"), None)
-
 
     def test_qmark(self):
         self.db.execute("DROP TABLE IF EXISTS foo")
