@@ -152,7 +152,7 @@ class SQLiteTests(SQLTests):
         self.db = SQL("sqlite:///test.db")
 
     def setUp(self):
-        self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
+        self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT, bin BLOB)")
 
     def test_lastrowid(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY AUTOINCREMENT, firstname TEXT, lastname TEXT)")
