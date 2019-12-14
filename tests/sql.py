@@ -32,9 +32,9 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT * FROM cs50"), [])
 
         rows = [
-            {"id": 1, "val": "foo"},
-            {"id": 2, "val": "bar"},
-            {"id": 3, "val": "baz"}
+            {"id": 1, "val": "foo", "bin": None},
+            {"id": 2, "val": "bar", "bin": None},
+            {"id": 3, "val": "baz", "bin": None}
         ]
         for row in rows:
             self.db.execute("INSERT INTO cs50(val) VALUES(:val)", val=row["val"])
@@ -61,7 +61,7 @@ class SQLTests(unittest.TestCase):
         for row in rows:
             self.db.execute("INSERT INTO cs50(val) VALUES(:val)", val=row["val"])
 
-        self.assertEqual(self.db.execute("SELECT * FROM cs50 WHERE id = :id OR val = :val", id=rows[1]["id"], val=rows[2]["val"]), rows[1:3])
+        self.assertEqual(self.db.execute("SELECT id, val FROM cs50 WHERE id = :id OR val = :val", id=rows[1]["id"], val=rows[2]["val"]), rows[1:3])
 
     def test_select_with_comments(self):
         self.assertEqual(self.db.execute("--comment\nSELECT * FROM cs50;\n--comment"), [])
@@ -99,6 +99,29 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = ':bar :baz'"), [{"val": ":bar :baz"}])
         self.assertEqual(self.db.execute("SELECT val FROM cs50 WHERE val = '  :bar :baz'"), [{"val": "  :bar :baz"}])
 
+    def test_blob(self):
+        rows = [
+            {"id": 1, "bin": b"\0"},
+            {"id": 2, "bin": b"\1"},
+            {"id": 3, "bin": b"\2"}
+        ]
+        for row in rows:
+            self.db.execute("INSERT INTO cs50(bin) VALUES(:bin)", bin=row["bin"])
+        self.assertEqual(self.db.execute("SELECT id, bin FROM cs50"), rows)
+
+    def test_commit(self):
+        self.db.execute("BEGIN")
+        self.db.execute("INSERT INTO cs50 (val) VALUES('foo')")
+        self.db.execute("COMMIT")
+        self.assertEqual(self.db.execute("SELECT val FROM cs50"), [{"val": "foo"}])
+
+    def test_rollback(self):
+        self.db.execute("BEGIN")
+        self.db.execute("INSERT INTO cs50 (val) VALUES('foo')")
+        self.db.execute("INSERT INTO cs50 (val) VALUES('bar')")
+        self.db.execute("ROLLBACK")
+        self.assertEqual(self.db.execute("SELECT val FROM cs50"), [])
+
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
         self.db.execute("DROP TABLE IF EXISTS foo")
@@ -119,7 +142,7 @@ class MySQLTests(SQLTests):
         self.db = SQL("mysql://root@localhost/test")
 
     def setUp(self):
-        self.db.execute("CREATE TABLE cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), PRIMARY KEY (id))")
+        self.db.execute("CREATE TABLE cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), bin BLOB, PRIMARY KEY (id))")
 
 class PostgresTests(SQLTests):
     @classmethod
@@ -127,7 +150,7 @@ class PostgresTests(SQLTests):
         self.db = SQL("postgresql://postgres@localhost/test")
 
     def setUp(self):
-        self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16))")
+        self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
 
 class SQLiteTests(SQLTests):
     @classmethod
@@ -136,7 +159,7 @@ class SQLiteTests(SQLTests):
         self.db = SQL("sqlite:///test.db")
 
     def setUp(self):
-        self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT)")
+        self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT, bin BLOB)")
 
     def test_lastrowid(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY AUTOINCREMENT, firstname TEXT, lastname TEXT)")

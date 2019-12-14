@@ -51,21 +51,31 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-            # Create engine, raising exception if back end's module not installed
-            self.engine = sqlalchemy.create_engine(url, **kwargs)
+            # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
+            engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
 
-            # Enable foreign key constraints
+            # Listener for connections
             def connect(dbapi_connection, connection_record):
+
+                # Disable underlying API's own emitting of BEGIN and COMMIT
+                dbapi_connection.isolation_level = None
+
+                # Enable foreign key constraints
                 if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA foreign_keys=ON")
                     cursor.close()
-            sqlalchemy.event.listen(self.engine, "connect", connect)
+
+            # Register listener
+            sqlalchemy.event.listen(engine, "connect", connect)
 
         else:
 
             # Create engine, raising exception if back end's module not installed
-            self.engine = sqlalchemy.create_engine(url, **kwargs)
+            engine = sqlalchemy.create_engine(url, **kwargs)
+
+        # Connect to database (for transactions' sake)
+        self._connection = engine.connect().execution_options(autocommit=False)
 
         # Log statements to standard error
         logging.basicConfig(level=logging.DEBUG)
@@ -260,8 +270,11 @@ class SQL(object):
             # Prepare, execute statement
             try:
 
+                # Join tokens into statement, abbreviating binary data as <class 'bytes'>
+                _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
+
                 # Execute statement
-                result = self.engine.execute(sqlalchemy.text(statement))
+                result = self._connection.execute(sqlalchemy.text(statement))
 
                 # Return value
                 ret = True
@@ -273,22 +286,33 @@ class SQL(object):
                     # If SELECT, return result set as list of dict objects
                     if value == "SELECT":
 
-                        # Coerce any decimal.Decimal objects to float objects
-                        # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
+                        # Coerce types
                         rows = [dict(row) for row in result.fetchall()]
                         for row in rows:
                             for column in row:
+
+                                # Coerce decimal.Decimal objects to float objects
+                                # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
                                 if type(row[column]) is decimal.Decimal:
                                     row[column] = float(row[column])
+
+                                # Coerce memoryview objects (as from PostgreSQL's bytea columns) to bytes
+                                elif type(row[column]) is memoryview:
+                                    row[column] = bytes(row[column])
+
+                        # Rows to be returned
                         ret = rows
 
                     # If INSERT, return primary key value for a newly inserted row (or None if none)
                     elif value == "INSERT":
-                        if self.engine.url.get_backend_name() in ["postgres", "postgresql"]:
-                            result = self.engine.execute("SELECT LASTVAL()")
-                            ret = result.first()[0]
+                        if self._connection.engine.url.get_backend_name() in ["postgres", "postgresql"]:
+                            try:
+                                result = self._connection.execute("SELECT LASTVAL()")
+                                ret = result.first()[0]
+                            except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
+                                ret = None
                         else:
-                            ret = result.lastrowid if result.lastrowid > 0 else None
+                            ret = result.lastrowid if result.rowcount == 1 else None
 
                     # If DELETE or UPDATE, return number of rows matched
                     elif value in ["DELETE", "UPDATE"]:
@@ -310,7 +334,7 @@ class SQL(object):
 
             # Return value
             else:
-                self._logger.debug(termcolor.colored(statement, "green"))
+                self._logger.debug(termcolor.colored(_statement, "green"))
                 return ret
 
     def _escape(self, value):
@@ -333,53 +357,58 @@ class SQL(object):
             if type(value) is bool:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Number,
-                    sqlalchemy.types.Boolean().literal_processor(self.engine.dialect)(value))
+                    sqlalchemy.types.Boolean().literal_processor(self._connection.engine.dialect)(value))
 
             # bytearray, bytes
             elif type(value) in [bytearray, bytes]:
-                raise RuntimeError("unsupported value")  # TODO
+                if self._connection.engine.url.get_backend_name() in ["mysql", "sqlite"]:
+                    return sqlparse.sql.Token(sqlparse.tokens.Other, f"x'{value.hex()}'")  # https://dev.mysql.com/doc/refman/8.0/en/hexadecimal-literals.html
+                elif self._connection.engine.url.get_backend_name() == "postgresql":
+                    return sqlparse.sql.Token(sqlparse.tokens.Other, f"'\\x{value.hex()}'")  # https://dba.stackexchange.com/a/203359
+                else:
+                    raise RuntimeError("unsupported value: {}".format(value))
 
             # datetime.date
             elif type(value) is datetime.date:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%Y-%m-%d")))
+                    sqlalchemy.types.String().literal_processor(self._connection.engine.dialect)(value.strftime("%Y-%m-%d")))
 
             # datetime.datetime
             elif type(value) is datetime.datetime:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%Y-%m-%d %H:%M:%S")))
+                    sqlalchemy.types.String().literal_processor(self._connection.engine.dialect)(value.strftime("%Y-%m-%d %H:%M:%S")))
 
             # datetime.time
             elif type(value) is datetime.time:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value.strftime("%H:%M:%S")))
+                    sqlalchemy.types.String().literal_processor(self._connection.engine.dialect)(value.strftime("%H:%M:%S")))
 
             # float
             elif type(value) is float:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Number,
-                    sqlalchemy.types.Float().literal_processor(self.engine.dialect)(value))
+                    sqlalchemy.types.Float().literal_processor(self._connection.engine.dialect)(value))
 
             # int
             elif type(value) is int:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Number,
-                    sqlalchemy.types.Integer().literal_processor(self.engine.dialect)(value))
+                    sqlalchemy.types.Integer().literal_processor(self._connection.engine.dialect)(value))
 
             # str
             elif type(value) is str:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self.engine.dialect)(value))
+                    sqlalchemy.types.String().literal_processor(self._connection.engine.dialect)(value))
 
             # None
             elif value is None:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Keyword,
-                    sqlalchemy.types.NullType().literal_processor(self.engine.dialect)(value))
+                    sqlalchemy.types.NullType().literal_processor(self._connection.engine.dialect)(value))
 
             # Unsupported value
             else:
@@ -387,11 +416,9 @@ class SQL(object):
 
         # Escape value(s), separating with commas as needed
         if type(value) in [list, tuple]:
-            return sqlparse.sql.TokenList(sqlparse.parse(", ".join([str(__escape(v)) for v in value])))
+            return sqlparse.sql.TokenList([__escape(v) for v in value])
         else:
-            return sqlparse.sql.Token(
-                sqlparse.tokens.String,
-                __escape(value))
+            return __escape(value)
 
 
 def _parse_exception(e):
