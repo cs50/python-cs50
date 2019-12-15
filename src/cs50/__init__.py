@@ -1,28 +1,27 @@
+import logging
 import os
 import sys
 
-try:
 
-    # Save student's sys.path
-    _path = sys.path[:]
+# Disable cs50 logger by default
+logging.getLogger("cs50").disabled = True
 
-    # In case student has files that shadow packages
-    sys.path = [p for p in sys.path if p not in ("", os.getcwd())]
-
-    # Import cs50_*
-    from .cs50 import get_char, get_float, get_int, get_string
+# In case student has files that shadow packages
+for p in ("", os.getcwd()):
     try:
-        from .cs50 import get_long
-    except ImportError:
+        sys.path.remove(p)
+    except ValueError:
         pass
 
-    # Replace Flask's logger
-    from . import flask
+# Import cs50_*
+from .cs50 import get_char, get_float, get_int, get_string
+try:
+    from .cs50 import get_long
+except ImportError:
+    pass
 
-    # Wrap SQLAlchemy
-    from .sql import SQL
+# Hook into flask importing
+from . import flask
 
-finally:
-
-    # Restore student's sys.path (just in case library raised an exception that caller caught)
-    sys.path = _path
+# Wrap SQLAlchemy
+from .sql import SQL
