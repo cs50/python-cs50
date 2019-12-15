@@ -89,6 +89,11 @@ class SQL(object):
         finally:
             self._logger.disabled = disabled
 
+    def __del__(self):
+        """Close database connection."""
+        if hasattr(self, "_connection"):
+            self._connection.close()
+
     @_enable_logging
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
