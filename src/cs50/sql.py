@@ -313,10 +313,8 @@ class SQL(object):
 
                 # Return value
                 ret = True
-                if tokens[0].ttype == sqlparse.tokens.Keyword.DML:
-
-                    # Uppercase token's value
-                    value = tokens[0].value.upper()
+                value = next((token.value.upper() for token in tokens if token.ttype == sqlparse.tokens.Keyword.DML), None)
+                if value:
 
                     # If SELECT, return result set as list of dict objects
                     if value == "SELECT":
