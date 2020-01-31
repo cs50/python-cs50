@@ -120,7 +120,7 @@ class SQL(object):
         if len(args) > 0 and len(kwargs) > 0:
             raise RuntimeError("cannot pass both named and positional parameters")
 
-        # Infer command
+        # Infer command from (unflattened) statement
         for token in statements[0]:
             if token.ttype in [sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
                 command = token.value.upper()
