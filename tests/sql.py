@@ -128,6 +128,9 @@ class SQLTests(unittest.TestCase):
         self.db.execute("ROLLBACK")
         self.assertEqual(self.db.execute("SELECT val FROM cs50"), [])
 
+    def test_cte(self):
+        self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 ) SELECT * FROM foo"), [{"1": 1}])
+
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
         self.db.execute("DROP TABLE IF EXISTS foo")

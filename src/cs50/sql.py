@@ -126,7 +126,7 @@ class SQL(object):
                 command = token.value.upper()
                 break
         else:
-            raise RuntimeError("unrecognized command")
+            command = None
 
         # Flatten statement
         tokens = list(statements[0].flatten())
