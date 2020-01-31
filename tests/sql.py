@@ -158,6 +158,9 @@ class PostgresTests(SQLTests):
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
 
+    def test_cte(self):
+        self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
+
 class SQLiteTests(SQLTests):
     @classmethod
     def setUpClass(self):
@@ -305,6 +308,9 @@ class SQLiteTests(SQLTests):
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)")
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', 'baz', 'qux')
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', baz='baz')
+
+    def test_cte(self):
+        self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
 
 
 if __name__ == "__main__":
