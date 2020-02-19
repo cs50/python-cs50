@@ -80,7 +80,7 @@ def get_float(prompt):
         if len(s) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", s):
             try:
                 return float(s)
-            except ValueError:
+            except (OverflowError, ValueError):
                 pass
 
 
