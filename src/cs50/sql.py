@@ -348,6 +348,10 @@ class SQL(object):
                         try:
                             result = connection.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
+                          
+                            # Commit changes to Postgres
+                            connection.execute("COMMIT")
+                            
                         except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
                             ret = None
                     else:
@@ -356,6 +360,9 @@ class SQL(object):
                 # If DELETE or UPDATE, return number of rows matched
                 elif command in ["DELETE", "UPDATE"]:
                     ret = result.rowcount
+                    # Commit changes to Postgres
+                    if self._engine.url.get_backend_name() in ["postgres", "postgresql"]:
+                        connection.execute("COMMIT")
 
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
