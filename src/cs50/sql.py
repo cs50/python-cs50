@@ -89,6 +89,9 @@ class SQL(object):
         finally:
             self._logger.disabled = disabled
 
+        # Whether we've registered a Flask teardown function for this connection
+        self.teardown_appcontext_added = False
+
     def __del__(self):
         """Close database connection."""
         if hasattr(self, "_connection"):
@@ -287,12 +290,10 @@ class SQL(object):
                 flask.g._connection = self._engine.connect()
 
                 # Disconnect later - but only once
-                teardown = True
-                for func in flask.current_app.teardown_appcontext_funcs:
-                    if func.__name__ == "shutdown_session":
-                        teardown = False
+                if not self.teardown_appcontext_added:
+                    self.teardown_appcontext_added = True
 
-                if teardown:
+                    # Register shutdown_session on app context teardown
                     @flask.current_app.teardown_appcontext
                     def shutdown_session(exception=None):
                         if hasattr(flask.g, "_connection"):
