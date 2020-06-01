@@ -9,7 +9,7 @@ import cs50.flask
 
 app = Flask(__name__)
 
-db = cs50.SQL("sqlite:///../sqlite.db")
+db = cs50.SQL("sqlite:///../test.db")
 
 @app.route("/")
 def index():

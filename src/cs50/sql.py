@@ -286,11 +286,17 @@ class SQL(object):
                 # Connect now
                 flask.g._connection = self._engine.connect()
 
-                # Disconnect later
-                @flask.current_app.teardown_appcontext
-                def shutdown_session(exception=None):
-                    if hasattr(flask.g, "_connection"):
-                        flask.g._connection.close()
+                # Disconnect later - but only once
+                teardown = True
+                for func in flask.current_app.teardown_appcontext_funcs:
+                    if func.__name__ == "shutdown_session":
+                        teardown = False
+
+                if teardown:
+                    @flask.current_app.teardown_appcontext
+                    def shutdown_session(exception=None):
+                        if hasattr(flask.g, "_connection"):
+                            flask.g._connection.close()
 
             # Use this connection
             connection = flask.g._connection
