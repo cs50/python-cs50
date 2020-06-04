@@ -2,19 +2,21 @@ import logging
 import os
 import requests
 import sys
-from flask import Flask, render_template
 
 sys.path.insert(0, "../../src")
 
 import cs50
 import cs50.flask
 
+from flask import Flask, render_template
+
 app = Flask(__name__)
 
 logging.disable(logging.CRITICAL)
 os.environ["WERKZEUG_RUN_MAIN"] = "true"
 
-db = cs50.SQL("sqlite:///../test.db")
+db_url = "sqlite:///../test.db"
+db = cs50.SQL(db_url)
 
 @app.route("/")
 def index():
@@ -28,7 +30,7 @@ def index():
 @app.route("/autocommit")
 def autocommit():
     db.execute("INSERT INTO test (val) VALUES (?)", "def")
-    db2 = cs50.SQL(db.url)
+    db2 = cs50.SQL(db_url)
     ret = db2.execute("SELECT val FROM test WHERE val=?", "def")
     return str(ret == [{"val": "def"}])
 
@@ -55,9 +57,9 @@ def insert():
 @app.route("/multiple_connections")
 def multiple_connections():
     ctx = len(app.teardown_appcontext_funcs)
-    db1 = cs50.SQL(db.url)
+    db1 = cs50.SQL(db_url)
     td1 = (len(app.teardown_appcontext_funcs) == ctx + 1)
-    db2 = cs50.SQL(db.url)
+    db2 = cs50.SQL(db_url)
     td2 = (len(app.teardown_appcontext_funcs) == ctx + 2)
     return str(td1 and td2)
 

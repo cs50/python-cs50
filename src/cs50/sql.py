@@ -43,7 +43,7 @@ class SQL(object):
         import os
         import re
         import sqlalchemy
-        import sqlalchemy.orm as orm
+        import sqlalchemy.orm
         import sqlite3
 
         # Get logger
@@ -57,14 +57,11 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-        # Record the URL (used in testing)
-        self.url = url
-
         # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
         self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
 
         # Create a variable to hold the session. If None, autocommit is on.
-        self.Session = orm.sessionmaker(bind=self._engine)
+        self._Session = sqlalchemy.orm.session.sessionmaker(bind=self._engine)
         self._session = None
 
         # Listener for connections
@@ -101,6 +98,7 @@ class SQL(object):
         """Close database session and connection."""
         if self._session is not None:
             self._session.close()
+            self._session = None
 
     @_enable_logging
     def execute(self, sql, *args, **kwargs):
@@ -134,11 +132,11 @@ class SQL(object):
                 command = token.value.upper()
                 break
 
-            # Begin a new transaction session, if done manually
+            # Begin a new session, if transaction started by caller (not using autocommit)
             elif token.value.upper() in ["BEGIN", "START"]:
                 if self._session is not None:
                     self._session.close()
-                self._session = self.Session()
+                self._session = self._Session()
         else:
             command = None
 
@@ -288,7 +286,7 @@ class SQL(object):
         # Connect to database (for transactions' sake)
         session = self._session
         if session is None:
-            session = self.Session()
+            session = self._Session()
 
         # Set up a Flask app teardown function to close session at teardown
         try:
@@ -303,11 +301,12 @@ class SQL(object):
             if not hasattr(self, "teardown_appcontext_added"):
                 self.teardown_appcontext_added = True
 
-                # Register shutdown_session on app context teardown
                 @flask.current_app.teardown_appcontext
                 def shutdown_session(exception=None):
+                    """Close any existing session on app context teardown."""
                     if self._session is not None:
                         self._session.close()
+                        self._session = None
 
         except (ModuleNotFoundError, AssertionError):
             pass
@@ -370,11 +369,9 @@ class SQL(object):
                     session.close()
                     self._session = None
 
-
                 # If autocommit is on, commit and close
                 if self._session is None and command not in ["COMMIT", "ROLLBACK"]:
-                    if command not in ["SELECT"]:
-                        session.commit()
+                    session.commit()
                     session.close()
 
             # If constraint violated, return None

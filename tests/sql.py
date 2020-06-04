@@ -120,7 +120,7 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
 
         # Load a new database instance to confirm the INSERTs were committed
-        db2 = SQL(self.db.url)
+        db2 = SQL(self.db_url)
         self.assertEqual(db2.execute("DELETE FROM cs50 WHERE id < 3"), 2)
 
     def test_commit(self):
@@ -129,7 +129,7 @@ class SQLTests(unittest.TestCase):
         self.db.execute("COMMIT")
 
         # Load a new database instance to confirm the INSERT was committed
-        db2 = SQL(self.db.url)
+        db2 = SQL(self.db_url)
         self.assertEqual(db2.execute("SELECT val FROM cs50"), [{"val": "foo"}])
 
     def test_rollback(self):
@@ -167,7 +167,8 @@ class SQLTests(unittest.TestCase):
 class MySQLTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("mysql://root@localhost/test")
+        self.db_url = "mysql://root@localhost/test"
+        self.db = SQL(self.db_url)
         print("\nMySQL tests")
 
     def setUp(self):
@@ -176,7 +177,8 @@ class MySQLTests(SQLTests):
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("postgresql://root:test@localhost/test")
+        self.db_url = "postgresql://root:test@localhost/test"
+        self.db = SQL(self.db_url)
         print("\nPOSTGRES tests")
 
     def setUp(self):
@@ -189,7 +191,8 @@ class SQLiteTests(SQLTests):
     @classmethod
     def setUpClass(self):
         open("test.db", "w").close()
-        self.db = SQL("sqlite:///test.db")
+        self.db_url = "sqlite:///test.db"
+        self.db = SQL(self.db_url)
         print("\nSQLite tests")
 
     def setUp(self):

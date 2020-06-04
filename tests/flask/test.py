@@ -1,4 +1,3 @@
-from application import app
 import logging
 import requests
 import sys
@@ -6,6 +5,7 @@ import threading
 import time
 import unittest
 
+from application import app
 
 def request(route):
     r = requests.get("http://localhost:5000/{}".format(route))
