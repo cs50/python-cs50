@@ -63,6 +63,7 @@ class SQL(object):
         # Create a variable to hold the session. If None, autocommit is on.
         self._Session = sqlalchemy.orm.session.sessionmaker(bind=self._engine)
         self._session = None
+        self._in_transaction = False
 
         # Listener for connections
         def connect(dbapi_connection, connection_record):
@@ -96,9 +97,7 @@ class SQL(object):
 
     def __del__(self):
         """Close database session and connection."""
-        if self._session is not None:
-            self._session.close()
-            self._session = None
+        self._close_session()
 
     @_enable_logging
     def execute(self, sql, *args, **kwargs):
@@ -134,9 +133,9 @@ class SQL(object):
 
             # Begin a new session, if transaction started by caller (not using autocommit)
             elif token.value.upper() in ["BEGIN", "START"]:
-                if self._session is not None:
-                    self._session.close()
-                self._session = self._Session()
+                if self._in_transaction:
+                    raise RuntimeError("transaction already open")
+                self._in_transaction = True
         else:
             command = None
 
@@ -284,9 +283,8 @@ class SQL(object):
         statement = "".join([str(token) for token in tokens])
 
         # Connect to database (for transactions' sake)
-        session = self._session
-        if session is None:
-            session = self._Session()
+        if self._session is None:
+            self._session = self._Session()
 
         # Set up a Flask app teardown function to close session at teardown
         try:
@@ -304,9 +302,7 @@ class SQL(object):
                 @flask.current_app.teardown_appcontext
                 def shutdown_session(exception=None):
                     """Close any existing session on app context teardown."""
-                    if self._session is not None:
-                        self._session.close()
-                        self._session = None
+                    self._close_session()
 
         except (ModuleNotFoundError, AssertionError):
             pass
@@ -323,8 +319,14 @@ class SQL(object):
                 # Join tokens into statement, abbreviating binary data as <class 'bytes'>
                 _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
+                # If COMMIT or ROLLBACK, turn on autocommit mode
+                if command in ["COMMIT", "ROLLBACK"] and "TO" not in statement:
+                    if not self._in_transaction:
+                        raise RuntimeError("transactions must be initiated with BEGIN or START TRANSACTION")
+                    self._in_transaction = False
+
                 # Execute statement
-                result = session.execute(sqlalchemy.text(statement))
+                result = self._session.execute(sqlalchemy.text(statement))
 
                 # Return value
                 ret = True
@@ -353,7 +355,7 @@ class SQL(object):
                 elif command == "INSERT":
                     if self._engine.url.get_backend_name() in ["postgres", "postgresql"]:
                         try:
-                            result = session.execute("SELECT LASTVAL()")
+                            result = self._session.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
                         except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
                             ret = None
@@ -364,15 +366,9 @@ class SQL(object):
                 elif command in ["DELETE", "UPDATE"]:
                     ret = result.rowcount
 
-                # If COMMIT or ROLLBACK, turn on autocommit mode
-                elif command in ["COMMIT", "ROLLBACK"] and "TO" not in statement:
-                    session.close()
-                    self._session = None
-
-                # If autocommit is on, commit and close
-                if self._session is None and command not in ["COMMIT", "ROLLBACK"]:
-                    session.commit()
-                    session.close()
+                # If autocommit is on, commit
+                if not self._in_transaction:
+                    self._session.commit()
 
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
@@ -392,6 +388,13 @@ class SQL(object):
             else:
                 self._logger.debug(termcolor.colored(_statement, "green"))
                 return ret
+
+    def _close_session(self):
+        """Closes any existing session and resets instance variables."""
+        if self._session is not None:
+            self._session.close()
+        self._session = None
+        self._in_transaction = False
 
     def _escape(self, value):
         """

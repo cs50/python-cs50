@@ -123,6 +123,12 @@ class SQLTests(unittest.TestCase):
         db2 = SQL(self.db_url)
         self.assertEqual(db2.execute("DELETE FROM cs50 WHERE id < 3"), 2)
 
+    def test_commit_no_transaction(self):
+        with self.assertRaises(RuntimeError):
+            self.db.execute("COMMIT")
+        with self.assertRaises(RuntimeError):
+            self.db.execute("ROLLBACK")
+
     def test_commit(self):
         self.db.execute("BEGIN")
         self.db.execute("INSERT INTO cs50 (val) VALUES('foo')")
@@ -131,6 +137,12 @@ class SQLTests(unittest.TestCase):
         # Load a new database instance to confirm the INSERT was committed
         db2 = SQL(self.db_url)
         self.assertEqual(db2.execute("SELECT val FROM cs50"), [{"val": "foo"}])
+
+    def test_double_begin(self):
+        self.db.execute("BEGIN")
+        with self.assertRaises(RuntimeError):
+            self.db.execute("BEGIN")
+        self.db.execute("ROLLBACK")
 
     def test_rollback(self):
         self.db.execute("BEGIN")
@@ -177,7 +189,7 @@ class MySQLTests(SQLTests):
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db_url = "postgresql://postgres@localhost/test"
+        self.db_url = "postgresql://root:test@localhost/test"
         self.db = SQL(self.db_url)
         print("\nPOSTGRES tests")
 
