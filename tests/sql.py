@@ -189,7 +189,7 @@ class MySQLTests(SQLTests):
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db_url = "postgresql://root:test@localhost/test"
+        self.db_url = "postgresql://postgres@localhost/test"
         self.db = SQL(self.db_url)
         print("\nPOSTGRES tests")
 
