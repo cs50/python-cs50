@@ -9,7 +9,7 @@ from cs50.sql import SQL
 
 class SQLTests(unittest.TestCase):
 
-    def test_multiple_statements(self):
+       def test_multiple_statements(self):
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')")
 
     def test_delete_returns_affected_rows(self):
@@ -19,7 +19,7 @@ class SQLTests(unittest.TestCase):
             {"id": 3, "val": "baz"}
         ]
         for row in rows:
-            self.db.execute("INSERT INTO cs50(val) VALUES(:val);", val=row["val"])
+        self.db.execute("INSERT INTO cs50(val) VALUES(:val);", val=row["val"])
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = :id", id=rows[0]["id"]), 1)
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = :a or id = :b", a=rows[1]["id"], b=rows[2]["id"]), 2)
         self.assertEqual(self.db.execute("DELETE FROM cs50 WHERE id = -50"), 0)
@@ -158,6 +158,11 @@ class PostgresTests(SQLTests):
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
 
+//Granted permision to root to select, insert, update and delete anything on all tables
+    def setUp(self):
+        self.db.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES TO root;")
+
+
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
 
@@ -172,7 +177,7 @@ class SQLiteTests(SQLTests):
 
     def test_lastrowid(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY AUTOINCREMENT, firstname TEXT, lastname TEXT)")
-        self.assertEqual(self.db.execute("INSERT INTO foo (firstname, lastname) VALUES('firstname', 'lastname')"), 1)
+        self.assertEqual(sv elf.db.execute("INSERT INTO foo (firstname, lastname) VALUES('firstname', 'lastname')"), 1)
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')")
         self.assertEqual(self.db.execute("INSERT OR IGNORE INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')"), None)
 
