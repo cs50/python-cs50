@@ -135,6 +135,7 @@ class SQL(object):
             elif token.value.upper() in ["BEGIN", "START"]:
                 if self._in_transaction:
                     raise RuntimeError("transaction already open")
+
                 self._in_transaction = True
         else:
             command = None
@@ -296,8 +297,8 @@ class SQL(object):
             assert flask.current_app
 
             # Disconnect later - but only once
-            if not hasattr(self, "teardown_appcontext_added"):
-                self.teardown_appcontext_added = True
+            if not hasattr(self, "_teardown_appcontext_added"):
+                self._teardown_appcontext_added = True
 
                 @flask.current_app.teardown_appcontext
                 def shutdown_session(exception=None):
@@ -320,9 +321,10 @@ class SQL(object):
                 _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
                 # If COMMIT or ROLLBACK, turn on autocommit mode
-                if command in ["COMMIT", "ROLLBACK"] and "TO" not in statement:
+                if command in ["COMMIT", "ROLLBACK"] and "TO" not in (token.value for token in tokens):
                     if not self._in_transaction:
                         raise RuntimeError("transactions must be initiated with BEGIN or START TRANSACTION")
+
                     self._in_transaction = False
 
                 # Execute statement
@@ -393,6 +395,7 @@ class SQL(object):
         """Closes any existing session and resets instance variables."""
         if self._session is not None:
             self._session.close()
+
         self._session = None
         self._in_transaction = False
 
