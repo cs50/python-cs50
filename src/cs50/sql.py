@@ -131,11 +131,10 @@ class SQL(object):
                 command = token.value.upper()
                 break
 
-            # Begin a new session, if transaction started by caller (not using autocommit)
+            # Begin a new session, if transaction opened by caller (not using autocommit)
             elif token.value.upper() in ["BEGIN", "START"]:
                 if self._in_transaction:
                     raise RuntimeError("transaction already open")
-
                 self._in_transaction = True
         else:
             command = None
@@ -323,8 +322,7 @@ class SQL(object):
                 # If COMMIT or ROLLBACK, turn on autocommit mode
                 if command in ["COMMIT", "ROLLBACK"] and "TO" not in (token.value for token in tokens):
                     if not self._in_transaction:
-                        raise RuntimeError("transactions must be initiated with BEGIN or START TRANSACTION")
-
+                        raise RuntimeError("transactions must be opened with BEGIN or START TRANSACTION")
                     self._in_transaction = False
 
                 # Execute statement
@@ -395,7 +393,6 @@ class SQL(object):
         """Closes any existing session and resets instance variables."""
         if self._session is not None:
             self._session.close()
-
         self._session = None
         self._in_transaction = False
 
