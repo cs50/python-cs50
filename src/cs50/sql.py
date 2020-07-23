@@ -95,9 +95,40 @@ class SQL(object):
         finally:
             self._logger.disabled = disabled
 
+        # Initialize lists of tokens that will cause parameter warnings
+        self._parameter_warnings = {
+            "previous_token": [
+                "AS", "DATABASE", "DISTINCT", "FROM",
+                "FULL OUTER JOIN", "GROUP BY", "INNER JOIN", "INTO",
+                "JOIN", "LEFT JOIN", "ON", "ORDER BY", "RIGHT JOIN",
+                "SELECT", "TABLE", "UPDATE", "WHERE"],
+            "next_token": ["AND", "IN", "IS"]
+        }
+
     def __del__(self):
         """Close database session and connection."""
         self._close_session()
+
+    def _adjacent_token(self, index, tokens, direction=-1, exclude_ttypes=[], exclude_strings=[]):
+        """Find the previous token in a list of tokens."""
+
+        def _has_excluded_string(tkn):
+            return True in map(lambda string: string in tkn, exclude_strings)
+
+        # Don't use nonexistent indices
+        if ((index == 0 and direction < 0) or index + direction == len(tokens)):
+            return tokens[index]
+
+        # Get next token, recur if needed
+        token = tokens[index + direction]
+        if token.ttype in exclude_ttypes or _has_excluded_string(token):
+            return self._adjacent_token(index + direction,
+                                        tokens,
+                                        direction=direction,
+                                        exclude_ttypes=exclude_ttypes,
+                                        exclude_strings=exclude_strings)
+        else:
+            return token
 
     @_enable_logging
     def execute(self, sql, *args, **kwargs):
@@ -142,7 +173,9 @@ class SQL(object):
         # Flatten statement
         tokens = list(statements[0].flatten())
 
-        # Validate paramstyle
+        # Validate paramstyle and check parameter locations
+        parameter_warning = False
+        inside_on_clause = False
         placeholders = {}
         paramstyle = None
         for index, token in enumerate(tokens):
@@ -163,6 +196,42 @@ class SQL(object):
 
                 # Remember placeholder's index, name
                 placeholders[index] = name
+
+                # Check if parameters are in places that indicate table or column names
+                if not parameter_warning:
+                    previous_token = self._adjacent_token(index,
+                                                          tokens,
+                                                          exclude_ttypes=[
+                                                              sqlparse.tokens.Whitespace,
+                                                              sqlparse.tokens.Punctuation,
+                                                              sqlparse.tokens.Name
+                                                          ])
+                    next_token = self._adjacent_token(index,
+                                                      tokens,
+                                                      direction=1,
+                                                      exclude_ttypes=[
+                                                          sqlparse.tokens.Whitespace,
+                                                          sqlparse.tokens.Punctuation,
+                                                          sqlparse.tokens.Name,
+                                                          sqlparse.tokens.Name.Placeholder
+                                                      ])
+
+                    if (next_token.ttype == sqlparse.tokens.Comparison
+                        or next_token.value in self._parameter_warnings["next_token"]
+                        or previous_token.value in self._parameter_warnings["previous_token"]
+                        or inside_on_clause):
+                        parameter_warning = True
+
+            # If about to enter an ON clause of a JOIN statement
+            if not parameter_warning and token.value == "ON":
+                inside_on_clause = True
+
+        # Warn into logger if parameters may be replacing table or column names
+        if parameter_warning:
+            self._logger.debug(
+                termcolor.colored("It looks like you're trying to pass in table "
+                                  "or column names with placeholders like ? or :varname. "
+                                  "This may cause errors!", "yellow"))
 
         # If more placeholders than arguments
         if len(args) == 1 and len(placeholders) > 1:
