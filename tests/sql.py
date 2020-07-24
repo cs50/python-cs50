@@ -1,3 +1,4 @@
+import contextlib
 import logging
 import sys
 import unittest
@@ -8,6 +9,221 @@ sys.path.insert(0, "../src")
 from cs50.sql import SQL
 
 class SQLTests(unittest.TestCase):
+
+    @classmethod
+    @contextlib.contextmanager
+    def assertNoLog(self, name, level="INFO", specifically=None):
+        with self.assertLogs(name, level=level) as cm:
+            yield
+
+        if cm.output[:-1]:
+            # If we're only checking for the absence of a particular message
+            if specifically:
+                if True not in map(lambda e: specifically in e, cm.output):
+                    yield
+                else:
+                    raise AssertionError("logs detected:", cm.output)
+            else:
+                raise AssertionError("logs detected:", cm.output)
+
+    def test_parameter_warnings_deletes(self):
+        logging.getLogger("cs50").disabled = False
+        
+        deletes = [
+            ["?", "", ["test"]],
+            ["test", "WHERE ?=3", ["id"]]
+        ]
+
+        for dlt in deletes:
+            with self.assertLogs("cs50", level="DEBUG") as cm:
+                command = f"DELETE FROM {dlt[0]} {dlt[1]}"
+                
+                # We don't care about the query results, just about the logs
+                try:
+                    self.db.execute(command, *dlt[2])
+                except RuntimeError:
+                    pass
+
+            self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
+
+        logging.getLogger("cs50").disabled = True
+
+    def test_parameter_warnings_inserts(self):
+        logging.getLogger("cs50").disabled = False
+        
+        inserts = [
+            ["test", "(id, ?)", "VALUES (3, ?)", ["name", "foo"]],
+            ["test", "(?, ?)", "VALUES (3, 'foo')", ["id", "name"]],
+            ["?", "(id, name)", "VALUES (3, 'foo')", ["test"]],
+            ["?", "(?, ?)", "VALUES (3, 'foo')", ["test", "id", "name"]],
+            ["?", "SELECT id FROM test", "", ["test3"]],
+            ["test3", "SELECT ? FROM test", "", ["id"]]
+        ]
+
+        for ins in inserts:
+            with self.assertLogs("cs50", level="DEBUG") as cm:
+                command = f"INSERT INTO {ins[0]} {ins[1]} {ins[2]}"
+                
+                try:
+                    self.db.execute(command, *ins[3])
+                except RuntimeError:
+                    pass
+
+            self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
+
+        logging.getLogger("cs50").disabled = True
+
+    def test_parameter_warnings_misc(self):
+        logging.getLogger("cs50").disabled = False
+        
+        queries = [
+            ["CREATE DATABASE ?", ["foo"]],
+            ["DROP DATABASE ?", ["foo"]],
+            ["CREATE TABLE ? (id INTEGER)", ["foo"]],
+            ["CREATE TABLE foo (? INTEGER)", ["id"]],
+            ["DROP TABLE ?", ["foo"]],
+            ["ALTER TABLE ? ADD num INTEGER", ["foo"]],
+            ["ALTER TABLE foo ADD ? INTEGER", ["num"]],
+            ["ALTER TABLE foo DROP COLUMN ?", ["num"]]
+        ]
+
+        for query in queries:
+            with self.assertLogs("cs50", level="DEBUG") as cm:
+                try:
+                    self.db.execute(query[0], *query[1])
+                except RuntimeError:
+                    pass
+
+            self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
+
+        logging.getLogger("cs50").disabled = True
+
+    def test_parameter_warnings_selects(self):
+        logging.getLogger("cs50").disabled = False
+        
+        selects = [
+            # Base tests
+            ["?", "test", "", ["name"]],
+            ["id", "?", "", ["test"]],
+            ["?, ?", "test", "", ["id", "name"]],
+            ["id, ?", "test", "", ["name"]],
+            
+            # Aggregation functions
+            ["COUNT(?)", "test", "", ["id"]],
+            ["AVG(?)", "test", "", ["id"]],
+            ["SUM(?)", "test", "", ["id"]],
+            ["MIN(?)", "test", "", ["id"]],
+            ["MAX(?)", "test", "", ["id"]],
+
+            # Comparisons
+            ["name", "test", "WHERE ? > 4", ["id"]],
+            ["name", "test", "WHERE ? >= 4", ["id"]],
+            ["name", "test", "WHERE ? = 4", ["id"]],
+            ["name", "test", "WHERE ? <= 4", ["id"]],
+            ["name", "test", "WHERE ? < 4", ["id"]],
+            ["name", "test", "WHERE NOT ? > 4", ["id"]],
+            ["id", "test", "WHERE ? IS NULL", ["name"]],
+            ["id", "test", "WHERE ? IS NOT NULL", ["name"]],
+            ["name", "test", "WHERE ? BETWEEN 3 AND 7", ["id"]],
+            ["id", "test", "WHERE ? LIKE '%foo'", ["name"]],
+            ["name", "test", "WHERE ? IN (SELECT id FROM test)", ["id"]],
+
+            # AND and OR
+            ["name", "test", "WHERE id < 4 AND ? > 1", ["id"]],
+            ["name", "test", "WHERE id < 4 OR ? > 7", ["id"]],
+
+            # ORDER BY and GROUP BY
+            ["name", "test", "ORDER BY ?", ["id"]],
+            ["name", "test", "ORDER BY ?, ?", ["id", "name"]],
+            ["name", "test", "ORDER BY id, ?", ["name"]],
+            ["name", "test", "ORDER BY ? DESC", ["id"]],
+            ["name", "test", "GROUP BY ?", ["id"]],
+            ["name", "test", "GROUP BY name, ?", ["id"]],
+
+            # Other odds and ends
+            ["DISTINCT ?", "test", "", ["id"]],
+            ["id AS ?", "test", "", ["new_id"]],
+            ["name", "test", "WHERE id IN (SELECT ? FROM test2)", ["id"]],
+            ["INTO ?", "test", "", ["test3"]],
+
+            # Joins
+            ["test.id, test2.name", "test", "INNER JOIN ? ON test2.id=test.id", ["test"]],
+            ["test.id, test2.name", "test", "INNER JOIN test ON ?=test.id", ["test2.id"]],
+            ["test.id, test2.name", "test", "INNER JOIN test ON test2.id=?", ["test.id"]],
+            ["test.id, test2.name", "test", "LEFT JOIN ? ON test2.id=test.id", ["test2"]],
+            ["test.id, test2.name", "test", "RIGHT JOIN ? ON test2.id=test.id", ["test2"]],
+            ["test.id, test2.name", "test", "FULL OUTER JOIN ? ON test2.id=test.id", ["test2"]]
+        ]
+
+        for sel in selects:
+            with self.assertLogs("cs50", level="DEBUG") as cm:
+                command = f"SELECT {sel[0]} FROM {sel[1]} {sel[2]}"
+                
+                try:
+                    self.db.execute(command, *sel[3])
+                except RuntimeError:
+                    pass
+
+            self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
+                
+        logging.getLogger("cs50").disabled = True
+
+    def test_parameter_warnings_updates(self):
+        logging.getLogger("cs50").disabled = False
+        
+        updates = [
+            ["?", "id=3", "WHERE name='foo'", ["test"]],
+            ["test", "?=4", "WHERE name='foo'", ["id"]],
+            ["test", "id=3", "WHERE ?=4", ["id"]],
+            ["test", "id=3, ?='bar'", "WHERE name='foo'", ["name"]]
+        ]
+
+        for upd in updates:
+            with self.assertLogs("cs50", level="DEBUG") as cm:
+                command = f"UPDATE {upd[0]} SET {upd[1]} {upd[2]}"
+                
+                try:
+                    self.db.execute(command, *upd[3])
+                except RuntimeError:
+                    pass
+
+            self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
+
+        logging.getLogger("cs50").disabled = True
+
+    def test_parameter_warnings_valid(self):
+        logging.getLogger("cs50").disabled = False
+        
+        # None of these should give warnings about parameters
+        queries = [
+            ["SELECT * FROM test", []],
+            ["SELECT * FROM test WHERE id=?", [5]],
+            ["SELECT * FROM test WHERE id IN (SELECT id FROM test2)", []],
+            ["SELECT * FROM test WHERE id < 6 AND name LIKE ?", ["%foo"]],
+            ["SELECT * FROM test ORDER BY name", []],
+            ["SELECT * FROM test GROUP BY name", []],
+            ["SELECT test.id, test2.name FROM test INNER JOIN ON test.id=test2.id", []],
+            ["INSERT INTO test (id, name) VALUES (?, ?)", [3, "foo"]],
+            ["INSERT INTO test SELECT id, name FROM test2", []],
+            ["UPDATE test SET name=? WHERE id=?", ["bar", 3]],
+            ["UPDATE test SET name=? WHERE id=? AND NOT name=?", ["foo", 3, "bar"]],
+            ["DELETE FROM test WHERE id=? AND NOT name=?", [3, "foo"]],
+            ["CREATE TABLE test3 (id INTEGER)", []],
+            ["DROP TABLE test3", []],
+            ["CREATE DATABASE test4", []],
+            ["DROP DATABASE test4", []],
+            ["ALTER TABLE test ADD num INTEGER", []],
+            ["ALTER TABLE test DROP COLUMN num", []]
+        ]
+
+        for query in queries:
+            with self.assertNoLog("cs50", level="DEBUG", specifically="This may cause errors"):
+                try:
+                    self.db.execute(query[0], *query[1])
+                except RuntimeError:
+                    pass
+
+        logging.getLogger("cs50").disabled = True
 
     def test_multiple_statements(self):
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')")

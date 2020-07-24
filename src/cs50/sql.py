@@ -98,11 +98,11 @@ class SQL(object):
         # Initialize lists of tokens that will cause parameter warnings
         self._parameter_warnings = {
             "previous_token": [
-                "AS", "DATABASE", "DISTINCT", "FROM",
+                "ADD", "AS", "COLUMN", "DATABASE", "DISTINCT", "FROM",
                 "FULL OUTER JOIN", "GROUP BY", "INNER JOIN", "INTO",
                 "JOIN", "LEFT JOIN", "ON", "ORDER BY", "RIGHT JOIN",
                 "SELECT", "TABLE", "UPDATE", "WHERE"],
-            "next_token": ["AND", "IN", "IS"]
+            "next_token": ["IN", "IS"]
         }
 
     def __del__(self):
@@ -230,7 +230,7 @@ class SQL(object):
         if parameter_warning:
             self._logger.debug(
                 termcolor.colored("It looks like you're trying to pass in table "
-                                  "or column names with placeholders like ? or :varname. "
+                                  "or column names using placeholders like ? or :varname. "
                                   "This may cause errors!", "yellow"))
 
         # If more placeholders than arguments
