@@ -10,6 +10,7 @@ install:
   - pip install mysqlclient
   - pip install psycopg2-binary
   - pip install flask
+  - pip install requests
 before_script:
   - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
   - psql -c 'create database test;' -U postgres
