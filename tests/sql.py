@@ -41,7 +41,7 @@ class SQLTests(unittest.TestCase):
                 # We don't care about the query results, just about the logs
                 try:
                     self.db.execute(command, *dlt[2])
-                except RuntimeError:
+                except:
                     pass
 
             self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
@@ -66,7 +66,7 @@ class SQLTests(unittest.TestCase):
                 
                 try:
                     self.db.execute(command, *ins[3])
-                except RuntimeError:
+                except:
                     pass
 
             self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
@@ -91,7 +91,7 @@ class SQLTests(unittest.TestCase):
             with self.assertLogs("cs50", level="DEBUG") as cm:
                 try:
                     self.db.execute(query[0], *query[1])
-                except RuntimeError:
+                except:
                     pass
 
             self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
@@ -161,7 +161,7 @@ class SQLTests(unittest.TestCase):
                 
                 try:
                     self.db.execute(command, *sel[3])
-                except RuntimeError:
+                except:
                     pass
 
             self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
@@ -184,7 +184,7 @@ class SQLTests(unittest.TestCase):
                 
                 try:
                     self.db.execute(command, *upd[3])
-                except RuntimeError:
+                except:
                     pass
 
             self.assertTrue(True in map(lambda o: "This may cause errors" in o, cm.output))
@@ -220,7 +220,7 @@ class SQLTests(unittest.TestCase):
             with self.assertNoLog("cs50", level="DEBUG", specifically="This may cause errors"):
                 try:
                     self.db.execute(query[0], *query[1])
-                except RuntimeError:
+                except:
                     pass
 
         logging.getLogger("cs50").disabled = True
