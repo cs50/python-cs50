@@ -9,11 +9,13 @@ install:
   - python setup.py install
   - pip install mysqlclient
   - pip install psycopg2-binary
+  - pip install flask
 before_script:
   - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
   - psql -c 'create database test;' -U postgres
   - touch test.db test1.db
-script: python tests/sql.py
+script:
+  - python -m tests
 deploy:
   - provider: script
     script: 'curl --fail --data "{ \"tag_name\": \"v$(python setup.py --version)\",

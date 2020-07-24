@@ -3,8 +3,6 @@ import os
 import requests
 import sys
 
-sys.path.insert(0, "../../src")
-
 import cs50
 import cs50.flask
 
@@ -12,20 +10,17 @@ from flask import Flask, render_template
 
 app = Flask(__name__)
 
-logging.disable(logging.CRITICAL)
 os.environ["WERKZEUG_RUN_MAIN"] = "true"
 
-db_url = "sqlite:///../test.db"
+with open("test.db", "w") as f:
+    f.write("")
+
+db_url = "sqlite:///test.db"
 db = cs50.SQL(db_url)
 
 @app.route("/")
 def index():
-    """
-    def f():
-        res = requests.get("cs50.harvard.edu")
-    f()
-    """
-    return render_template("index.html")
+    return "flask tests for python-cs50"
 
 @app.route("/autocommit")
 def autocommit():

@@ -5,13 +5,29 @@ import threading
 import time
 import unittest
 
-from application import app
+from .flask_test import app
 
 def request(route):
     r = requests.get("http://localhost:5000/{}".format(route))
     return r.text == "True"
 
 class FlaskTests(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(self):
+        with open("test.db", "w") as f:
+            f.write("")
+
+        self.t = threading.Thread(target=app.run, daemon=True)
+        self.t.start()
+
+        logging.disable(logging.CRITICAL)
+        print("\nFlask tests")
+
+    @classmethod
+    def tearDownClass(self):
+        with open("test.db", "w") as f:
+            f.write("")
 
     def test__create(self):
         self.assertTrue(request("create"))
