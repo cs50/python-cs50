@@ -110,13 +110,13 @@ class SQL(object):
         self._close_session()
 
     def _adjacent_token(self, index, tokens, direction=-1, exclude_ttypes=[], exclude_strings=[]):
-        """Find the previous token in a list of tokens."""
+        """Find the previous or next token in a list of tokens, given token types and token values to ignore."""
 
         def _has_excluded_string(tkn):
             return True in map(lambda string: string in tkn, exclude_strings)
 
         # Don't use nonexistent indices
-        if ((index == 0 and direction < 0) or index + direction == len(tokens)):
+        if (index == 0 and direction < 0) or index + direction == len(tokens):
             return tokens[index]
 
         # Get next token, recur if needed
