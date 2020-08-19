@@ -43,6 +43,7 @@ class SQL(object):
         import os
         import re
         import sqlalchemy
+        import sqlalchemy.orm
         import sqlite3
 
         # Get logger
@@ -58,6 +59,11 @@ class SQL(object):
 
         # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
         self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
+
+        # Create a variable to hold the session. If None, autocommit is on.
+        self._Session = sqlalchemy.orm.session.sessionmaker(bind=self._engine)
+        self._session = None
+        self._in_transaction = False
 
         # Listener for connections
         def connect(dbapi_connection, connection_record):
@@ -90,9 +96,8 @@ class SQL(object):
             self._logger.disabled = disabled
 
     def __del__(self):
-        """Close database connection."""
-        if hasattr(self, "_connection"):
-            self._connection.close()
+        """Close database session and connection."""
+        self._close_session()
 
     @_enable_logging
     def execute(self, sql, *args, **kwargs):
@@ -125,6 +130,12 @@ class SQL(object):
             if token.ttype in [sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
                 command = token.value.upper()
                 break
+
+            # Begin a new session, if transaction opened by caller (not using autocommit)
+            elif token.value.upper() in ["BEGIN", "START"]:
+                if self._in_transaction:
+                    raise RuntimeError("transaction already open")
+                self._in_transaction = True
         else:
             command = None
 
@@ -272,6 +283,10 @@ class SQL(object):
         statement = "".join([str(token) for token in tokens])
 
         # Connect to database (for transactions' sake)
+        if self._session is None:
+            self._session = self._Session()
+
+        # Set up a Flask app teardown function to close session at teardown
         try:
 
             # Infer whether Flask is installed
@@ -280,29 +295,17 @@ class SQL(object):
             # Infer whether app is defined
             assert flask.current_app
 
-            # If no connection for app's current request yet
-            if not hasattr(flask.g, "_connection"):
+            # Disconnect later - but only once
+            if not hasattr(self, "_teardown_appcontext_added"):
+                self._teardown_appcontext_added = True
 
-                # Connect now
-                flask.g._connection = self._engine.connect()
-
-                # Disconnect later
                 @flask.current_app.teardown_appcontext
                 def shutdown_session(exception=None):
-                    if hasattr(flask.g, "_connection"):
-                        flask.g._connection.close()
-
-            # Use this connection
-            connection = flask.g._connection
+                    """Close any existing session on app context teardown."""
+                    self._close_session()
 
         except (ModuleNotFoundError, AssertionError):
-
-            # If no connection yet
-            if not hasattr(self, "_connection"):
-                self._connection = self._engine.connect()
-
-            # Use this connection
-            connection = self._connection
+            pass
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
@@ -316,8 +319,14 @@ class SQL(object):
                 # Join tokens into statement, abbreviating binary data as <class 'bytes'>
                 _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
+                # If COMMIT or ROLLBACK, turn on autocommit mode
+                if command in ["COMMIT", "ROLLBACK"] and "TO" not in (token.value for token in tokens):
+                    if not self._in_transaction:
+                        raise RuntimeError("transactions must be opened with BEGIN or START TRANSACTION")
+                    self._in_transaction = False
+
                 # Execute statement
-                result = connection.execute(sqlalchemy.text(statement))
+                result = self._session.execute(sqlalchemy.text(statement))
 
                 # Return value
                 ret = True
@@ -346,7 +355,7 @@ class SQL(object):
                 elif command == "INSERT":
                     if self._engine.url.get_backend_name() in ["postgres", "postgresql"]:
                         try:
-                            result = connection.execute("SELECT LASTVAL()")
+                            result = self._session.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
                         except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
                             ret = None
@@ -356,6 +365,10 @@ class SQL(object):
                 # If DELETE or UPDATE, return number of rows matched
                 elif command in ["DELETE", "UPDATE"]:
                     ret = result.rowcount
+
+                # If autocommit is on, commit
+                if not self._in_transaction:
+                    self._session.commit()
 
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
@@ -375,6 +388,13 @@ class SQL(object):
             else:
                 self._logger.debug(termcolor.colored(_statement, "green"))
                 return ret
+
+    def _close_session(self):
+        """Closes any existing session and resets instance variables."""
+        if self._session is not None:
+            self._session.close()
+        self._session = None
+        self._in_transaction = False
 
     def _escape(self, value):
         """
