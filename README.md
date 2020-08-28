@@ -15,7 +15,7 @@ import cs50
 
 ...
 
-f = cs50.get_float();
-i = cs50.get_int();
-s = cs50.get_string();
+f = cs50.get_float()
+i = cs50.get_int()
+s = cs50.get_string()
 ```
