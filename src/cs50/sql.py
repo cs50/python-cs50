@@ -455,7 +455,7 @@ class SQL(object):
 
         # Escape value(s), separating with commas as needed
         if type(value) in [list, tuple]:
-            return sqlparse.sql.TokenList([__escape(v) for v in value])
+            return sqlparse.sql.TokenList(sqlparse.parse(", ".join([str(__escape(v)) for v in value])))
         else:
             return __escape(value)
 
