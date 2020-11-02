@@ -19,6 +19,7 @@ def _wrap_flask(f):
         _flask_init_before = f.Flask.__init__
         def _flask_init_after(self, *args, **kwargs):
             _flask_init_before(self, *args, **kwargs)
+            self.config["TEMPLATES_AUTO_RELOAD"] = True
             self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)
         f.Flask.__init__ = _flask_init_after
 
