@@ -56,8 +56,8 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-        # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
-        self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
+        # Create engine, raising exception if back end's module not installed
+        self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=True)
 
         # Listener for connections
         def connect(dbapi_connection, connection_record):
