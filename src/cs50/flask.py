@@ -20,7 +20,8 @@ def _wrap_flask(f):
         def _flask_init_after(self, *args, **kwargs):
             _flask_init_before(self, *args, **kwargs)
             self.config["TEMPLATES_AUTO_RELOAD"] = True  # Automatically reload templates
-            self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)  # For HTTPS-to-HTTP proxy
+            if os.getenv("CS50_IDE_TYPE") == "online":
+                self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)  # For HTTPS-to-HTTP proxy
         f.Flask.__init__ = _flask_init_after
 
 
