@@ -333,10 +333,9 @@ class SQL(object):
                 # Execute statement
                 if self._autocommit:
                     connection.execute(sqlalchemy.text("BEGIN"))
-                    result = connection.execute(sqlalchemy.text(statement))
+                result = connection.execute(sqlalchemy.text(statement))
+                if self._autocommit:
                     connection.execute(sqlalchemy.text("COMMIT"))
-                else:
-                    result = connection.execute(sqlalchemy.text(statement))
 
                 # Check for end of transaction
                 if command in ["COMMIT", "ROLLBACK"]:
