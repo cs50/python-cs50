@@ -388,7 +388,7 @@ class SQL(object):
                 raise e
 
             # If user errror
-            except sqlalchemy.exc.OperationalError as e:
+            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
                 self._disconnect()
                 self._logger.debug(termcolor.colored(statement, "red"))
                 e = RuntimeError(e.orig)
