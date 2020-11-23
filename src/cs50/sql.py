@@ -385,13 +385,12 @@ class SQL(object):
 
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
-                self._disconnect()
                 self._logger.debug(termcolor.colored(statement, "yellow"))
-                e = RuntimeError(e.orig)
+                e = ValueError(e.orig)
                 e.__cause__ = None
                 raise e
 
-            # If user errror
+            # If user error
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
                 self._disconnect()
                 self._logger.debug(termcolor.colored(statement, "red"))
