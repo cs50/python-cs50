@@ -281,7 +281,7 @@ class SQL(object):
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
 
-        # Connect to database (for transactions' sake)
+        # Connect to database
         try:
 
             # Infer whether Flask is installed
@@ -290,19 +290,23 @@ class SQL(object):
             # Infer whether app is defined
             assert flask.current_app
 
-            # If no connection for app's current request yet
+            # If new context
             if not hasattr(flask.g, "_connection"):
 
-                # Connect now
-                flask.g._connection = self._engine.connect()
+                # Ready to connect
+                flask.g._connection = None
 
                 # Disconnect later
                 @flask.current_app.teardown_appcontext
                 def shutdown_session(exception=None):
-                    if hasattr(flask.g, "_connection"):
+                    if flask.g._connection:
                         flask.g._connection.close()
 
-            # Use this connection
+            # If no connection for context yet
+            if not flask.g._connection:
+                flas.g._connection = self._engine.connect()
+
+            # Use context's connection
             connection = flask.g._connection
 
         except (ModuleNotFoundError, AssertionError):
