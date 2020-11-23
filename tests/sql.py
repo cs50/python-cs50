@@ -211,23 +211,13 @@ class SQLiteTests(SQLTests):
         self.db.execute("INSERT INTO foo VALUES ('qux', 'quux')")
         self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ?", 'qux'), [{"firstname": "qux", "lastname": "quux"}])
         self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ? AND lastname = ?", "qux", "quux"), [{"firstname": "qux", "lastname": "quux"}])
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ? AND lastname = ?", ("qux", "quux")), [{"firstname": "qux", "lastname": "quux"}])
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ? AND lastname = ?", ["qux", "quux"]), [{"firstname": "qux", "lastname": "quux"}])
         self.db.execute("DELETE FROM foo")
 
         self.db.execute("INSERT INTO foo VALUES (?)", ("bar", "baz"))
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
-        self.db.execute("INSERT INTO foo VALUES (?, ?)", ("bar", "baz"))
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
         self.db.execute("INSERT INTO foo VALUES (?)", ["bar", "baz"])
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (?, ?)", ["bar", "baz"])
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
@@ -308,18 +298,7 @@ class SQLiteTests(SQLTests):
         self.db.execute("INSERT INTO foo VALUES ('qux', 'quux')")
         self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :1", 'qux'), [{"firstname": "qux", "lastname": "quux"}])
         self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :1 AND lastname = :2", "qux", "quux"), [{"firstname": "qux", "lastname": "quux"}])
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :1 AND lastname = :2", ("qux", "quux")), [{"firstname": "qux", "lastname": "quux"}])
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :1 AND lastname = :2", ["qux", "quux"]), [{"firstname": "qux", "lastname": "quux"}])
         self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (:1, :2)", ("bar", "baz"))
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (:1, :2)", ["bar", "baz"])
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
 
         self.db.execute("INSERT INTO foo VALUES (:1,:2)", "bar", "baz")
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
