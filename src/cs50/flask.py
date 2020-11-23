@@ -14,12 +14,11 @@ def _wrap_flask(f):
 
     f.logging.default_handler.formatter.formatException = lambda exc_info: _formatException(*exc_info)
 
-    if os.getenv("CS50_IDE_TYPE"):
+    if os.getenv("CS50_IDE_TYPE") == "online":
         from werkzeug.middleware.proxy_fix import ProxyFix
         _flask_init_before = f.Flask.__init__
         def _flask_init_after(self, *args, **kwargs):
             _flask_init_before(self, *args, **kwargs)
-            self.config["TEMPLATES_AUTO_RELOAD"] = True  # Automatically reload templates
             self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)  # For HTTPS-to-HTTP proxy
         f.Flask.__init__ = _flask_init_after
 
