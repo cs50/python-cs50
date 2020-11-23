@@ -79,7 +79,7 @@ db.execute("COMMIT")
 
 import cs50
 db = cs50.SQL("postgresql://postgres@localhost/test")
-db.execute("CREATE TABLE IF NOT EXISTS cs50 (id INTEGER PRIMARY KEY, val TEXT, bin BLOB)")
+db.execute("CREATE TABLE IF NOT EXISTS cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
 db.execute("INSERT INTO cs50 (val) VALUES('a')")
 db.execute("INSERT INTO cs50 (val) VALUES('b')")
 db.execute("BEGIN")
