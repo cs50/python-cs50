@@ -7,6 +7,7 @@ sys.path.insert(0, "../src")
 
 from cs50.sql import SQL
 
+
 class SQLTests(unittest.TestCase):
 
     def test_multiple_statements(self):
@@ -115,50 +116,16 @@ class SQLTests(unittest.TestCase):
             self.db.execute("INSERT INTO cs50(bin) VALUES(:bin)", bin=row["bin"])
         self.assertEqual(self.db.execute("SELECT id, bin FROM cs50"), rows)
 
-    def test_autocommit(self):
-        self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('foo')"), 1)
-        self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
-
-        # Load a new database instance to confirm the INSERTs were committed
-        db2 = SQL(self.db_url)
-        self.assertEqual(db2.execute("DELETE FROM cs50 WHERE id < 3"), 2)
-
-    def test_commit_no_transaction(self):
-        with self.assertRaises(RuntimeError):
-            self.db.execute("COMMIT")
-        with self.assertRaises(RuntimeError):
-            self.db.execute("ROLLBACK")
-
     def test_commit(self):
         self.db.execute("BEGIN")
         self.db.execute("INSERT INTO cs50 (val) VALUES('foo')")
         self.db.execute("COMMIT")
-
-        # Load a new database instance to confirm the INSERT was committed
-        db2 = SQL(self.db_url)
-        self.assertEqual(db2.execute("SELECT val FROM cs50"), [{"val": "foo"}])
-
-    def test_double_begin(self):
-        self.db.execute("BEGIN")
-        with self.assertRaises(RuntimeError):
-            self.db.execute("BEGIN")
-        self.db.execute("ROLLBACK")
+        self.assertEqual(self.db.execute("SELECT val FROM cs50"), [{"val": "foo"}])
 
     def test_rollback(self):
         self.db.execute("BEGIN")
         self.db.execute("INSERT INTO cs50 (val) VALUES('foo')")
         self.db.execute("INSERT INTO cs50 (val) VALUES('bar')")
-        self.db.execute("ROLLBACK")
-        self.assertEqual(self.db.execute("SELECT val FROM cs50"), [])
-
-    def test_savepoint(self):
-        self.db.execute("BEGIN")
-        self.db.execute("INSERT INTO cs50 (val) VALUES('foo')")
-        self.db.execute("SAVEPOINT sp1")
-        self.db.execute("INSERT INTO cs50 (val) VALUES('bar')")
-        self.assertEqual(self.db.execute("SELECT val FROM cs50"), [{"val": "foo"}, {"val": "bar"}])
-        self.db.execute("ROLLBACK TO sp1")
-        self.assertEqual(self.db.execute("SELECT val FROM cs50"), [{"val": "foo"}])
         self.db.execute("ROLLBACK")
         self.assertEqual(self.db.execute("SELECT val FROM cs50"), [])
 
@@ -176,22 +143,20 @@ class SQLTests(unittest.TestCase):
             if not str(e).startswith("(1051"):
                 raise e
 
+
 class MySQLTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db_url = "mysql://root@localhost/test"
-        self.db = SQL(self.db_url)
-        print("\nMySQL tests")
+        self.db = SQL("mysql://root@localhost/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), bin BLOB, PRIMARY KEY (id))")
 
+
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db_url = "postgresql://postgres@localhost/test"
-        self.db = SQL(self.db_url)
-        print("\nPOSTGRES tests")
+        self.db = SQL("postgresql://postgres@localhost/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
@@ -199,13 +164,13 @@ class PostgresTests(SQLTests):
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
 
+
 class SQLiteTests(SQLTests):
+
     @classmethod
     def setUpClass(self):
         open("test.db", "w").close()
-        self.db_url = "sqlite:///test.db"
-        self.db = SQL(self.db_url)
-        print("\nSQLite tests")
+        self.db = SQL("sqlite:///test.db")
 
     def setUp(self):
         self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT, bin BLOB)")
@@ -247,7 +212,15 @@ class SQLiteTests(SQLTests):
         self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ? AND lastname = ?", ["qux", "quux"]), [{"firstname": "qux", "lastname": "quux"}])
         self.db.execute("DELETE FROM foo")
 
+        self.db.execute("INSERT INTO foo VALUES (?)", ("bar", "baz"))
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
         self.db.execute("INSERT INTO foo VALUES (?, ?)", ("bar", "baz"))
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (?)", ["bar", "baz"])
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
@@ -255,19 +228,28 @@ class SQLiteTests(SQLTests):
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
-
         self.db.execute("INSERT INTO foo VALUES (?,?)", "bar", "baz")
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
         self.db.execute("CREATE TABLE bar (firstname STRING)")
+
         self.db.execute("INSERT INTO bar VALUES (?)", "baz")
         self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
+        self.db.execute("DELETE FROM bar")
+
+        self.db.execute("INSERT INTO bar VALUES (?)", "baz")
+        self.db.execute("INSERT INTO bar VALUES (?)", "qux")
+        self.assertEqual(self.db.execute("SELECT * FROM bar WHERE firstname IN (?)", ("baz", "qux")), [{"firstname": "baz"}, {"firstname": "qux"}])
+        self.db.execute("DELETE FROM bar")
+
+        self.db.execute("INSERT INTO bar VALUES (?)", "baz")
+        self.db.execute("INSERT INTO bar VALUES (?)", "qux")
+        self.assertEqual(self.db.execute("SELECT * FROM bar WHERE firstname IN (?)", ["baz", "qux"]), [{"firstname": "baz"}, {"firstname": "qux"}])
+        self.db.execute("DELETE FROM bar")
 
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?)")
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)")
-        # self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?)", ('bar', 'baz'))
-        # self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?)", ['bar', 'baz'])
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", 'bar', 'baz', 'qux')
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", ('bar', 'baz', 'qux'))
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", ['bar', 'baz', 'qux'])
