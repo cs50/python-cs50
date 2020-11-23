@@ -127,7 +127,7 @@ class SQL(object):
 
         # Ensure named and positional parameters are mutually exclusive
         if len(args) > 0 and len(kwargs) > 0:
-            raise RuntimeError("cannot pass both named and positional parameters")
+            raise RuntimeError("cannot pass both positional and named parameters")
 
         # Infer command from (unflattened) statement
         for token in statements[0]:
@@ -162,18 +162,6 @@ class SQL(object):
 
                 # Remember placeholder's index, name
                 placeholders[index] = name
-
-        # If more placeholders than arguments
-        if len(args) == 1 and len(placeholders) > 1:
-
-            # If user passed args as list or tuple, explode values into args
-            if isinstance(args[0], (list, tuple)):
-                args = args[0]
-
-            # If user passed kwargs as dict, migrate values from args to kwargs
-            elif len(kwargs) == 0 and isinstance(args[0], dict):
-                kwargs = args[0]
-                args = []
 
         # If no placeholders
         if not paramstyle:
