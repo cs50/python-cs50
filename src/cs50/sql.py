@@ -62,7 +62,8 @@ class SQL(object):
         # Listener for connections
         def connect(dbapi_connection, connection_record):
 
-            # Disable underlying API's own emitting of BEGIN and COMMIT
+            # Disable underlying API's own emitting of BEGIN and COMMIT so we can ourselves
+            # https://docs.sqlalchemy.org/en/13/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
             dbapi_connection.isolation_level = None
 
             # Enable foreign key constraints
@@ -70,6 +71,9 @@ class SQL(object):
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
+
+            # Autocommit by default
+            self._autocommit = True
 
         # Register listener
         sqlalchemy.event.listen(self._engine, "connect", connect)
@@ -90,9 +94,14 @@ class SQL(object):
             self._logger.disabled = disabled
 
     def __del__(self):
+        """Disconnect from database."""
+        self._disconnect()
+
+    def _disconnect(self):
         """Close database connection."""
         if hasattr(self, "_connection"):
             self._connection.close()
+            delattr(self, "_connection")
 
     @_enable_logging
     def execute(self, sql, *args, **kwargs):
@@ -107,7 +116,7 @@ class SQL(object):
         import warnings
 
         # Parse statement, stripping comments and then leading/trailing whitespace
-        statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True).strip())
+        statements = sqlparse.parse(sqlparse.format(sql, keyword_case="upper", strip_comments=True).strip())
 
         # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
@@ -122,9 +131,10 @@ class SQL(object):
 
         # Infer command from (unflattened) statement
         for token in statements[0]:
-            if token.ttype in [sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
-                command = token.value.upper()
-                break
+            if token.ttype in [sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
+                if token.value in ["BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"]:
+                    command = token.value
+                    break
         else:
             command = None
 
@@ -271,7 +281,7 @@ class SQL(object):
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
 
-        # Connect to database (for transactions' sake)
+        # Connect to database
         try:
 
             # Infer whether Flask is installed
@@ -280,19 +290,23 @@ class SQL(object):
             # Infer whether app is defined
             assert flask.current_app
 
-            # If no connection for app's current request yet
+            # If new context
             if not hasattr(flask.g, "_connection"):
 
-                # Connect now
-                flask.g._connection = self._engine.connect()
+                # Ready to connect
+                flask.g._connection = None
 
                 # Disconnect later
                 @flask.current_app.teardown_appcontext
                 def shutdown_session(exception=None):
-                    if hasattr(flask.g, "_connection"):
+                    if flask.g._connection:
                         flask.g._connection.close()
 
-            # Use this connection
+            # If no connection for context yet
+            if not flask.g._connection:
+                flas.g._connection = self._engine.connect()
+
+            # Use context's connection
             connection = flask.g._connection
 
         except (ModuleNotFoundError, AssertionError):
@@ -316,8 +330,20 @@ class SQL(object):
                 # Join tokens into statement, abbreviating binary data as <class 'bytes'>
                 _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
+                # Check for start of transaction
+                if command in ["BEGIN", "START"]:
+                    self._autocommit = False
+
                 # Execute statement
+                if self._autocommit:
+                    connection.execute(sqlalchemy.text("BEGIN"))
                 result = connection.execute(sqlalchemy.text(statement))
+                if self._autocommit:
+                    connection.execute(sqlalchemy.text("COMMIT"))
+
+                # Check for end of transaction
+                if command in ["COMMIT", "ROLLBACK"]:
+                    self._autocommit = True
 
                 # Return value
                 ret = True
@@ -360,12 +386,13 @@ class SQL(object):
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
                 self._logger.debug(termcolor.colored(statement, "yellow"))
-                e = RuntimeError(e.orig)
+                e = ValueError(e.orig)
                 e.__cause__ = None
                 raise e
 
-            # If user errror
-            except sqlalchemy.exc.OperationalError as e:
+            # If user error
+            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
+                self._disconnect()
                 self._logger.debug(termcolor.colored(statement, "red"))
                 e = RuntimeError(e.orig)
                 e.__cause__ = None

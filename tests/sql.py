@@ -150,7 +150,8 @@ class MySQLTests(SQLTests):
         self.db = SQL("mysql://root@localhost/test")
 
     def setUp(self):
-        self.db.execute("CREATE TABLE cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), bin BLOB, PRIMARY KEY (id))")
+        self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), bin BLOB, PRIMARY KEY (id))")
+        self.db.execute("DELETE FROM cs50")
 
 
 class PostgresTests(SQLTests):
@@ -159,7 +160,8 @@ class PostgresTests(SQLTests):
         self.db = SQL("postgresql://postgres@localhost/test")
 
     def setUp(self):
-        self.db.execute("CREATE TABLE cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
+        self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
+        self.db.execute("DELETE FROM cs50")
 
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
@@ -173,23 +175,24 @@ class SQLiteTests(SQLTests):
         self.db = SQL("sqlite:///test.db")
 
     def setUp(self):
-        self.db.execute("CREATE TABLE cs50(id INTEGER PRIMARY KEY, val TEXT, bin BLOB)")
+        self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id INTEGER PRIMARY KEY, val TEXT, bin BLOB)")
+        self.db.execute("DELETE FROM cs50")
 
     def test_lastrowid(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY AUTOINCREMENT, firstname TEXT, lastname TEXT)")
         self.assertEqual(self.db.execute("INSERT INTO foo (firstname, lastname) VALUES('firstname', 'lastname')"), 1)
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')")
+        self.assertRaises(ValueError, self.db.execute, "INSERT INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')")
         self.assertEqual(self.db.execute("INSERT OR IGNORE INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')"), None)
 
     def test_integrity_constraints(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
         self.assertEqual(self.db.execute("INSERT INTO foo VALUES(1)"), 1)
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES(1)")
+        self.assertRaises(ValueError, self.db.execute, "INSERT INTO foo VALUES(1)")
 
     def test_foreign_key_support(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
         self.db.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO bar VALUES(50)")
+        self.assertRaises(ValueError, self.db.execute, "INSERT INTO bar VALUES(50)")
 
     def test_qmark(self):
         self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
