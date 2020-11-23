@@ -187,12 +187,12 @@ class SQLiteTests(SQLTests):
     def test_integrity_constraints(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
         self.assertEqual(self.db.execute("INSERT INTO foo VALUES(1)"), 1)
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES(1)")
+        self.assertRaises(ValueError, self.db.execute, "INSERT INTO foo VALUES(1)")
 
     def test_foreign_key_support(self):
         self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
         self.db.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO bar VALUES(50)")
+        self.assertRaises(ValueError, self.db.execute, "INSERT INTO bar VALUES(50)")
 
     def test_qmark(self):
         self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
