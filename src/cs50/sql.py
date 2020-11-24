@@ -292,7 +292,7 @@ class SQL(object):
 
             # If no connection for context yet
             if not flask.g._connection:
-                flas.g._connection = self._engine.connect()
+                flask.g._connection = self._engine.connect()
 
             # Use context's connection
             connection = flask.g._connection
