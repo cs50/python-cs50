@@ -10,13 +10,13 @@ _logger.setLevel(logging.DEBUG)
 # Log messages once
 _logger.propagate = False
 
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter("%(levelname)s: %(message)s")
 formatter.formatException = lambda exc_info: _formatException(*exc_info)
-ch.setFormatter(formatter)
-_logger.addHandler(ch)
+handler.setFormatter(formatter)
+_logger.addHandler(handler)
 
 
 class SQL(object):
