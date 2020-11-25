@@ -22,6 +22,21 @@ try:
 except IndexError:
     pass
 
+# Configure cs50 logger
+_logger = logging.getLogger("cs50")
+_logger.setLevel(logging.DEBUG)
+
+# Log messages once
+_logger.propagate = False
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter("%(levelname)s: %(message)s")
+formatter.formatException = lambda exc_info: _formatException(*exc_info)
+handler.setFormatter(formatter)
+_logger.addHandler(handler)
+
 
 class _flushfile():
     """
