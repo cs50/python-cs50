@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import inspect
+import logging
 import os
 import re
 import sys
@@ -9,6 +10,13 @@ from distutils.sysconfig import get_python_lib
 from os.path import abspath, join
 from termcolor import colored
 from traceback import format_exception
+
+
+# Configure default logging handler and formatter
+logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
+
+# Patch formatException
+logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
 
 
 class _flushfile():

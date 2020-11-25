@@ -1,28 +1,4 @@
-def _enable_logging(f):
-    """Enable logging of SQL statements when Flask is in use."""
-
-    import logging
-    import functools
-
-    @functools.wraps(f)
-    def decorator(*args, **kwargs):
-
-        # Infer whether Flask is installed
-        try:
-            import flask
-        except ModuleNotFoundError:
-            return f(*args, **kwargs)
-
-        # Enable logging
-        disabled = logging.getLogger("cs50").disabled
-        if flask.current_app:
-            logging.getLogger("cs50").disabled = False
-        try:
-            return f(*args, **kwargs)
-        finally:
-            logging.getLogger("cs50").disabled = disabled
-
-    return decorator
+import logging
 
 
 class SQL(object):
@@ -44,9 +20,6 @@ class SQL(object):
         import re
         import sqlalchemy
         import sqlite3
-
-        # Get logger
-        self._logger = logging.getLogger("cs50")
 
         # Require that file already exist for SQLite
         matches = re.search(r"^sqlite:///(.+)$", url)
@@ -78,20 +51,17 @@ class SQL(object):
         # Register listener
         sqlalchemy.event.listen(self._engine, "connect", connect)
 
-        # Log statements to standard error
-        logging.basicConfig(level=logging.DEBUG)
-
         # Test database
+        disabled = logging.root.disabled
+        logging.root.disabled = True
         try:
-            disabled = self._logger.disabled
-            self._logger.disabled = True
             self.execute("SELECT 1")
         except sqlalchemy.exc.OperationalError as e:
             e = RuntimeError(_parse_exception(e))
             e.__cause__ = None
             raise e
         finally:
-            self._logger.disabled = disabled
+            logging.root.disabled = disabled
 
     def __del__(self):
         """Disconnect from database."""
@@ -103,7 +73,6 @@ class SQL(object):
             self._connection.close()
             delattr(self, "_connection")
 
-    @_enable_logging
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
 
@@ -373,7 +342,7 @@ class SQL(object):
 
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
-                self._logger.debug(termcolor.colored(statement, "yellow"))
+                logging.debug(termcolor.colored(statement, "yellow"))
                 e = ValueError(e.orig)
                 e.__cause__ = None
                 raise e
@@ -381,14 +350,14 @@ class SQL(object):
             # If user error
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
                 self._disconnect()
-                self._logger.debug(termcolor.colored(statement, "red"))
+                logging.debug(termcolor.colored(statement, "red"))
                 e = RuntimeError(e.orig)
                 e.__cause__ = None
                 raise e
 
             # Return value
             else:
-                self._logger.debug(termcolor.colored(_statement, "green"))
+                logging.debug(termcolor.colored(_statement, "green"))
                 return ret
 
     def _escape(self, value):
