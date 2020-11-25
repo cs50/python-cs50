@@ -15,8 +15,11 @@ from traceback import format_exception
 # Configure default logging handler and formatter
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
-# Patch formatException
-logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
+try:
+    # Patch formatException
+    logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
+except IndexError:
+    pass
 
 
 class _flushfile():
