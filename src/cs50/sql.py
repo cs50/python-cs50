@@ -4,7 +4,7 @@ from .cs50 import _formatException
 
 
 # Configure logger
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger("cs50")
 _logger.setLevel(logging.DEBUG)
 
 # Log messages once
