@@ -13,6 +13,7 @@ from traceback import format_exception
 
 
 # Configure default logging handler and formatter
+# Prevent flask, werkzeug, etc from adding default handler
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
 try:

@@ -1,6 +1,3 @@
-import logging
-
-
 class SQL(object):
     """Wrap SQLAlchemy to provide a simple SQL API."""
 
@@ -20,6 +17,8 @@ class SQL(object):
         import re
         import sqlalchemy
         import sqlite3
+
+        from .cs50 import _formatException
 
         # Require that file already exist for SQLite
         matches = re.search(r"^sqlite:///(.+)$", url)
@@ -51,9 +50,24 @@ class SQL(object):
         # Register listener
         sqlalchemy.event.listen(self._engine, "connect", connect)
 
+        # Configure logger
+        self._logger = logging.getLogger(__name__)
+        self._logger.setLevel(logging.DEBUG)
+
+        # Log messages once
+        self._logger.propagate = False
+
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+
+        formatter = logging.Formatter("%(levelname)s: %(message)s")
+        formatter.formatException = lambda exc_info: _formatException(*exc_info)
+        ch.setFormatter(formatter)
+        self._logger.addHandler(ch)
+
         # Test database
-        disabled = logging.root.disabled
-        logging.root.disabled = True
+        disabled = self._logger.disabled
+        self._logger.disabled = True
         try:
             self.execute("SELECT 1")
         except sqlalchemy.exc.OperationalError as e:
@@ -61,7 +75,7 @@ class SQL(object):
             e.__cause__ = None
             raise e
         finally:
-            logging.root.disabled = disabled
+            self._logger.disabled = disabled
 
     def __del__(self):
         """Disconnect from database."""
@@ -342,7 +356,7 @@ class SQL(object):
 
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
-                logging.debug(termcolor.colored(statement, "yellow"))
+                self._logger.debug(termcolor.colored(statement, "yellow"))
                 e = ValueError(e.orig)
                 e.__cause__ = None
                 raise e
@@ -350,14 +364,14 @@ class SQL(object):
             # If user error
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
                 self._disconnect()
-                logging.debug(termcolor.colored(statement, "red"))
+                self._logger.debug(termcolor.colored(statement, "red"))
                 e = RuntimeError(e.orig)
                 e.__cause__ = None
                 raise e
 
             # Return value
             else:
-                logging.debug(termcolor.colored(_statement, "green"))
+                self._logger.debug(termcolor.colored(_statement, "green"))
                 return ret
 
     def _escape(self, value):
