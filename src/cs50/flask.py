@@ -12,8 +12,6 @@ def _wrap_flask(f):
     if f.__version__ < StrictVersion("1.0"):
         return
 
-    f.logging.default_handler.formatter.formatException = lambda exc_info: _formatException(*exc_info)
-
     if os.getenv("CS50_IDE_TYPE") == "online":
         from werkzeug.middleware.proxy_fix import ProxyFix
         _flask_init_before = f.Flask.__init__

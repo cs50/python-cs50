@@ -45,9 +45,6 @@ class SQL(object):
         import sqlalchemy
         import sqlite3
 
-        # Get logger
-        self._logger = logging.getLogger("cs50")
-
         # Require that file already exist for SQLite
         matches = re.search(r"^sqlite:///(.+)$", url)
         if matches:
@@ -58,6 +55,8 @@ class SQL(object):
 
         # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
         self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
+
+        self._logger = logging.getLogger("cs50")
 
         # Listener for connections
         def connect(dbapi_connection, connection_record):
@@ -78,13 +77,11 @@ class SQL(object):
         # Register listener
         sqlalchemy.event.listen(self._engine, "connect", connect)
 
-        # Log statements to standard error
-        logging.basicConfig(level=logging.DEBUG)
 
         # Test database
+        disabled = self._logger.disabled
+        self._logger.disabled = True
         try:
-            disabled = self._logger.disabled
-            self._logger.disabled = True
             self.execute("SELECT 1")
         except sqlalchemy.exc.OperationalError as e:
             e = RuntimeError(_parse_exception(e))
