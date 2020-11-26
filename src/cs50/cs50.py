@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import inspect
+import logging
 import os
 import re
 import sys
@@ -9,6 +10,32 @@ from distutils.sysconfig import get_python_lib
 from os.path import abspath, join
 from termcolor import colored
 from traceback import format_exception
+
+
+# Configure default logging handler and formatter
+# Prevent flask, werkzeug, etc from adding default handler
+logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
+
+try:
+    # Patch formatException
+    logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
+except IndexError:
+    pass
+
+# Configure cs50 logger
+_logger = logging.getLogger("cs50")
+_logger.setLevel(logging.DEBUG)
+
+# Log messages once
+_logger.propagate = False
+
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter("%(levelname)s: %(message)s")
+formatter.formatException = lambda exc_info: _formatException(*exc_info)
+handler.setFormatter(formatter)
+_logger.addHandler(handler)
 
 
 class _flushfile():

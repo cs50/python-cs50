@@ -43,11 +43,7 @@ class SQL(object):
         import os
         import re
         import sqlalchemy
-        import sqlalchemy.orm
         import sqlite3
-
-        # Get logger
-        self._logger = logging.getLogger("cs50")
 
         # Require that file already exist for SQLite
         matches = re.search(r"^sqlite:///(.+)$", url)
@@ -60,15 +56,13 @@ class SQL(object):
         # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
         self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
 
-        # Create a variable to hold the session. If None, autocommit is on.
-        self._Session = sqlalchemy.orm.session.sessionmaker(bind=self._engine)
-        self._session = None
-        self._in_transaction = False
+        self._logger = logging.getLogger("cs50")
 
         # Listener for connections
         def connect(dbapi_connection, connection_record):
 
-            # Disable underlying API's own emitting of BEGIN and COMMIT
+            # Disable underlying API's own emitting of BEGIN and COMMIT so we can ourselves
+            # https://docs.sqlalchemy.org/en/13/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
             dbapi_connection.isolation_level = None
 
             # Enable foreign key constraints
@@ -77,16 +71,17 @@ class SQL(object):
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
 
+            # Autocommit by default
+            self._autocommit = True
+
         # Register listener
         sqlalchemy.event.listen(self._engine, "connect", connect)
 
-        # Log statements to standard error
-        logging.basicConfig(level=logging.DEBUG)
 
         # Test database
+        disabled = self._logger.disabled
+        self._logger.disabled = True
         try:
-            disabled = self._logger.disabled
-            self._logger.disabled = True
             self.execute("SELECT 1")
         except sqlalchemy.exc.OperationalError as e:
             e = RuntimeError(_parse_exception(e))
@@ -96,8 +91,14 @@ class SQL(object):
             self._logger.disabled = disabled
 
     def __del__(self):
-        """Close database session and connection."""
-        self._close_session()
+        """Disconnect from database."""
+        self._disconnect()
+
+    def _disconnect(self):
+        """Close database connection."""
+        if hasattr(self, "_connection"):
+            self._connection.close()
+            delattr(self, "_connection")
 
     @_enable_logging
     def execute(self, sql, *args, **kwargs):
@@ -112,7 +113,7 @@ class SQL(object):
         import warnings
 
         # Parse statement, stripping comments and then leading/trailing whitespace
-        statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True).strip())
+        statements = sqlparse.parse(sqlparse.format(sql, keyword_case="upper", strip_comments=True).strip())
 
         # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
@@ -123,19 +124,14 @@ class SQL(object):
 
         # Ensure named and positional parameters are mutually exclusive
         if len(args) > 0 and len(kwargs) > 0:
-            raise RuntimeError("cannot pass both named and positional parameters")
+            raise RuntimeError("cannot pass both positional and named parameters")
 
         # Infer command from (unflattened) statement
         for token in statements[0]:
-            if token.ttype in [sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
-                command = token.value.upper()
-                break
-
-            # Begin a new session, if transaction opened by caller (not using autocommit)
-            elif token.value.upper() in ["BEGIN", "START"]:
-                if self._in_transaction:
-                    raise RuntimeError("transaction already open")
-                self._in_transaction = True
+            if token.ttype in [sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
+                if token.value in ["BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"]:
+                    command = token.value
+                    break
         else:
             command = None
 
@@ -163,18 +159,6 @@ class SQL(object):
 
                 # Remember placeholder's index, name
                 placeholders[index] = name
-
-        # If more placeholders than arguments
-        if len(args) == 1 and len(placeholders) > 1:
-
-            # If user passed args as list or tuple, explode values into args
-            if isinstance(args[0], (list, tuple)):
-                args = args[0]
-
-            # If user passed kwargs as dict, migrate values from args to kwargs
-            elif len(kwargs) == 0 and isinstance(args[0], dict):
-                kwargs = args[0]
-                args = []
 
         # If no placeholders
         if not paramstyle:
@@ -282,11 +266,7 @@ class SQL(object):
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
 
-        # Connect to database (for transactions' sake)
-        if self._session is None:
-            self._session = self._Session()
-
-        # Set up a Flask app teardown function to close session at teardown
+        # Connect to database
         try:
 
             # Infer whether Flask is installed
@@ -295,17 +275,33 @@ class SQL(object):
             # Infer whether app is defined
             assert flask.current_app
 
-            # Disconnect later - but only once
-            if not hasattr(self, "_teardown_appcontext_added"):
-                self._teardown_appcontext_added = True
+            # If new context
+            if not hasattr(flask.g, "_connection"):
 
+                # Ready to connect
+                flask.g._connection = None
+
+                # Disconnect later
                 @flask.current_app.teardown_appcontext
                 def shutdown_session(exception=None):
-                    """Close any existing session on app context teardown."""
-                    self._close_session()
+                    if flask.g._connection:
+                        flask.g._connection.close()
+
+            # If no connection for context yet
+            if not flask.g._connection:
+                flask.g._connection = self._engine.connect()
+
+            # Use context's connection
+            connection = flask.g._connection
 
         except (ModuleNotFoundError, AssertionError):
-            pass
+
+            # If no connection yet
+            if not hasattr(self, "_connection"):
+                self._connection = self._engine.connect()
+
+            # Use this connection
+            connection = self._connection
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
@@ -319,14 +315,20 @@ class SQL(object):
                 # Join tokens into statement, abbreviating binary data as <class 'bytes'>
                 _statement = "".join([str(bytes) if token.ttype == sqlparse.tokens.Other else str(token) for token in tokens])
 
-                # If COMMIT or ROLLBACK, turn on autocommit mode
-                if command in ["COMMIT", "ROLLBACK"] and "TO" not in (token.value for token in tokens):
-                    if not self._in_transaction:
-                        raise RuntimeError("transactions must be opened with BEGIN or START TRANSACTION")
-                    self._in_transaction = False
+                # Check for start of transaction
+                if command in ["BEGIN", "START"]:
+                    self._autocommit = False
 
                 # Execute statement
-                result = self._session.execute(sqlalchemy.text(statement))
+                if self._autocommit:
+                    connection.execute(sqlalchemy.text("BEGIN"))
+                result = connection.execute(sqlalchemy.text(statement))
+                if self._autocommit:
+                    connection.execute(sqlalchemy.text("COMMIT"))
+
+                # Check for end of transaction
+                if command in ["COMMIT", "ROLLBACK"]:
+                    self._autocommit = True
 
                 # Return value
                 ret = True
@@ -355,7 +357,7 @@ class SQL(object):
                 elif command == "INSERT":
                     if self._engine.url.get_backend_name() in ["postgres", "postgresql"]:
                         try:
-                            result = self._session.execute("SELECT LASTVAL()")
+                            result = connection.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
                         except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
                             ret = None
@@ -366,19 +368,16 @@ class SQL(object):
                 elif command in ["DELETE", "UPDATE"]:
                     ret = result.rowcount
 
-                # If autocommit is on, commit
-                if not self._in_transaction:
-                    self._session.commit()
-
             # If constraint violated, return None
             except sqlalchemy.exc.IntegrityError as e:
                 self._logger.debug(termcolor.colored(statement, "yellow"))
-                e = RuntimeError(e.orig)
+                e = ValueError(e.orig)
                 e.__cause__ = None
                 raise e
 
-            # If user errror
-            except sqlalchemy.exc.OperationalError as e:
+            # If user error
+            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
+                self._disconnect()
                 self._logger.debug(termcolor.colored(statement, "red"))
                 e = RuntimeError(e.orig)
                 e.__cause__ = None
@@ -388,13 +387,6 @@ class SQL(object):
             else:
                 self._logger.debug(termcolor.colored(_statement, "green"))
                 return ret
-
-    def _close_session(self):
-        """Closes any existing session and resets instance variables."""
-        if self._session is not None:
-            self._session.close()
-        self._session = None
-        self._in_transaction = False
 
     def _escape(self, value):
         """
@@ -475,7 +467,7 @@ class SQL(object):
 
         # Escape value(s), separating with commas as needed
         if type(value) in [list, tuple]:
-            return sqlparse.sql.TokenList([__escape(v) for v in value])
+            return sqlparse.sql.TokenList(sqlparse.parse(", ".join([str(__escape(v)) for v in value])))
         else:
             return __escape(value)
 
