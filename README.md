@@ -5,7 +5,7 @@
 ## Installation
 
 ```
-pip install cs50
+pip3 install cs50
 ```
 
 ## Usage
