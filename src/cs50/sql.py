@@ -56,6 +56,7 @@ class SQL(object):
         # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
         self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
 
+        # Get logger
         self._logger = logging.getLogger("cs50")
 
         # Listener for connections
@@ -76,7 +77,6 @@ class SQL(object):
 
         # Register listener
         sqlalchemy.event.listen(self._engine, "connect", connect)
-
 
         # Test database
         disabled = self._logger.disabled
@@ -275,24 +275,24 @@ class SQL(object):
             # Infer whether app is defined
             assert flask.current_app
 
-            # If new context
-            if not hasattr(flask.g, "_connection"):
+            # If no connections to any databases yet
+            if not hasattr(flask.g, "_connections"):
+                setattr(flask.g, "_connections", {})
+            connections = getattr(flask.g, "_connections")
 
-                # Ready to connect
-                flask.g._connection = None
+            # If not yet connected to this database
+            # https://flask.palletsprojects.com/en/1.1.x/appcontext/#storing-data
+            if self not in connections:
 
-                # Disconnect later
-                @flask.current_app.teardown_appcontext
-                def shutdown_session(exception=None):
-                    if flask.g._connection:
-                        flask.g._connection.close()
+                # Connect to database
+                connections[self] = self._engine.connect()
 
-            # If no connection for context yet
-            if not flask.g._connection:
-                flask.g._connection = self._engine.connect()
+                # Disconnect from database later
+                if _teardown_appcontext not in flask.current_app.teardown_appcontext_funcs:
+                    flask.current_app.teardown_appcontext(_teardown_appcontext)
 
-            # Use context's connection
-            connection = flask.g._connection
+            # Use this connection
+            connection = connections[self]
 
         except (ModuleNotFoundError, AssertionError):
 
@@ -533,3 +533,10 @@ def _parse_placeholder(token):
 
     # Invalid
     raise RuntimeError("{}: invalid placeholder".format(token.value))
+
+
+def _teardown_appcontext(exception=None):
+    """Closes context's database connection, if any."""
+    import flask
+    for connection in flask.g.pop("_connections", {}).values():
+        connection.close()
