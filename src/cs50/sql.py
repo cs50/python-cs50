@@ -56,6 +56,7 @@ class SQL(object):
         # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
         self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
 
+        # Get logger
         self._logger = logging.getLogger("cs50")
 
         # Listener for connections
@@ -76,7 +77,6 @@ class SQL(object):
 
         # Register listener
         sqlalchemy.event.listen(self._engine, "connect", connect)
-
 
         # Test database
         disabled = self._logger.disabled
@@ -282,17 +282,17 @@ class SQL(object):
 
             # If not yet connected to this database
             # https://flask.palletsprojects.com/en/1.1.x/appcontext/#storing-data
-            if id(self) not in connections:
+            if self not in connections:
 
                 # Connect to database
-                connections[id(self)] = self._engine.connect()
+                connections[self] = self._engine.connect()
 
                 # Disconnect from database later
                 if _teardown_appcontext not in flask.current_app.teardown_appcontext_funcs:
                     flask.current_app.teardown_appcontext(_teardown_appcontext)
 
             # Use this connection
-            connection = connections[id(self)]
+            connection = connections[self]
 
         except (ModuleNotFoundError, AssertionError):
 
