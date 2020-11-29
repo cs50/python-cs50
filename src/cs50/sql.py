@@ -276,20 +276,15 @@ class SQL(object):
             assert flask.current_app
 
             # If new context
-            if not hasattr(flask.g, "_connection"):
+            # https://flask.palletsprojects.com/en/1.1.x/appcontext/#storing-data
+            if "_connection" not in flask.g:
 
-                # Ready to connect
-                flask.g._connection = None
-
-                # Disconnect later
-                @flask.current_app.teardown_appcontext
-                def shutdown_session(exception=None):
-                    if flask.g._connection:
-                        flask.g._connection.close()
-
-            # If no connection for context yet
-            if not flask.g._connection:
+                # Connect to database
                 flask.g._connection = self._engine.connect()
+
+                # Disconnect from database later
+                if _teardown_appcontext not in flask.current_app.teardown_appcontext_funcs:
+                    flask.current_app.teardown_appcontext(_teardown_appcontext)
 
             # Use context's connection
             connection = flask.g._connection
@@ -533,3 +528,11 @@ def _parse_placeholder(token):
 
     # Invalid
     raise RuntimeError("{}: invalid placeholder".format(token.value))
+
+
+def _teardown_appcontext(exception=None):
+    """Closes context's database connection, if any."""
+    import flask
+    connection = flask.g.pop("_connection", None)
+    if connection:
+        connection.close()
