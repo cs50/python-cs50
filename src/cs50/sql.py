@@ -284,7 +284,7 @@ class SQL(object):
                 # Disconnect later
                 @flask.current_app.teardown_appcontext
                 def shutdown_session(exception=None):
-                    if flask.g._connection:
+                    if hasattr(flask.g, "_connection") and flask.g._connection:
                         flask.g._connection.close()
 
             # If no connection for context yet
