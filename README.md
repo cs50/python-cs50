@@ -42,7 +42,6 @@ s = cs50.get_string();
    ```
 1. Run `service postgresql start`.
 1. Run `psql -c 'create database test;' -U postgres`.
-1. Run `touch test.db`.
 
 ### Sample Tests
 

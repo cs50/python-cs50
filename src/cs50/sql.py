@@ -43,6 +43,7 @@ class SQL(object):
         import os
         import re
         import sqlalchemy
+        import sqlalchemy.orm
         import sqlite3
 
         # Require that file already exist for SQLite
@@ -72,11 +73,11 @@ class SQL(object):
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
 
-            # Autocommit by default
-            self._autocommit = True
-
         # Register listener
         sqlalchemy.event.listen(self._engine, "connect", connect)
+
+        # Autocommit by default
+        self._autocommit = True
 
         # Test database
         disabled = self._logger.disabled
@@ -96,9 +97,9 @@ class SQL(object):
 
     def _disconnect(self):
         """Close database connection."""
-        if hasattr(self, "_connection"):
-            self._connection.close()
-            delattr(self, "_connection")
+        if hasattr(self, "_session"):
+            self._session.remove()
+            delattr(self, "_session")
 
     @_enable_logging
     def execute(self, sql, *args, **kwargs):
@@ -275,33 +276,34 @@ class SQL(object):
             # Infer whether app is defined
             assert flask.current_app
 
-            # If no connections to any databases yet
-            if not hasattr(flask.g, "_connections"):
-                setattr(flask.g, "_connections", {})
-            connections = getattr(flask.g, "_connections")
+            # If no sessions for any databases yet
+            if not hasattr(flask.g, "_sessions"):
+                setattr(flask.g, "_sessions", {})
+            sessions = getattr(flask.g, "_sessions")
 
-            # If not yet connected to this database
+            # If no session yet for this database
             # https://flask.palletsprojects.com/en/1.1.x/appcontext/#storing-data
-            if self not in connections:
+            # https://stackoverflow.com/a/34010159
+            if self not in sessions:
 
                 # Connect to database
-                connections[self] = self._engine.connect()
+                sessions[self] = sqlalchemy.orm.scoping.scoped_session(sqlalchemy.orm.sessionmaker(bind=self._engine))
 
-                # Disconnect from database later
+                # Remove session later
                 if _teardown_appcontext not in flask.current_app.teardown_appcontext_funcs:
                     flask.current_app.teardown_appcontext(_teardown_appcontext)
 
             # Use this connection
-            connection = connections[self]
+            session = sessions[self]
 
         except (ModuleNotFoundError, AssertionError):
 
             # If no connection yet
-            if not hasattr(self, "_connection"):
-                self._connection = self._engine.connect()
+            if not hasattr(self, "_session"):
+                self._session  = sqlalchemy.orm.scoping.scoped_session(sqlalchemy.orm.sessionmaker(bind=self._engine))
 
             # Use this connection
-            connection = self._connection
+            session = self._session
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
@@ -321,10 +323,10 @@ class SQL(object):
 
                 # Execute statement
                 if self._autocommit:
-                    connection.execute(sqlalchemy.text("BEGIN"))
-                result = connection.execute(sqlalchemy.text(statement))
+                    session.execute(sqlalchemy.text("BEGIN"))
+                result = session.execute(sqlalchemy.text(statement))
                 if self._autocommit:
-                    connection.execute(sqlalchemy.text("COMMIT"))
+                    session.execute(sqlalchemy.text("COMMIT"))
 
                 # Check for end of transaction
                 if command in ["COMMIT", "ROLLBACK"]:
@@ -357,7 +359,7 @@ class SQL(object):
                 elif command == "INSERT":
                     if self._engine.url.get_backend_name() in ["postgres", "postgresql"]:
                         try:
-                            result = connection.execute("SELECT LASTVAL()")
+                            result = session.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
                         except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
                             ret = None
@@ -538,5 +540,5 @@ def _parse_placeholder(token):
 def _teardown_appcontext(exception=None):
     """Closes context's database connection, if any."""
     import flask
-    for connection in flask.g.pop("_connections", {}).values():
-        connection.close()
+    for session in flask.g.pop("_sessions", {}).values():
+        session.remove()
