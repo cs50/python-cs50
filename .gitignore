@@ -1,7 +1,8 @@
 .*
 !.gitignore
 !.travis.yml
-dist/
 *.db
 *.egg-info/
 *.pyc
+dist/
+test.db
