@@ -293,7 +293,7 @@ class SQL(object):
                 if _teardown_appcontext not in flask.current_app.teardown_appcontext_funcs:
                     flask.current_app.teardown_appcontext(_teardown_appcontext)
 
-            # Use this connection
+            # Use this session
             session = sessions[self]
 
         except (ModuleNotFoundError, AssertionError):
@@ -302,7 +302,7 @@ class SQL(object):
             if not hasattr(self, "_session"):
                 self._session  = sqlalchemy.orm.scoping.scoped_session(sqlalchemy.orm.sessionmaker(bind=self._engine))
 
-            # Use this connection
+            # Use this session
             session = self._session
 
         # Catch SQLAlchemy warnings
