@@ -133,17 +133,11 @@ def get_string(prompt):
     Read a line of text from standard input and return it as a string,
     sans trailing line ending. Supports CR (\r), LF (\n), and CRLF (\r\n)
     as line endings. If user inputs only a line ending, returns "", not None.
-    Returns None upon error or no input whatsoever (i.e., just EOF). Exits
-    from Python altogether on SIGINT.
+    Returns None upon error or no input whatsoever (i.e., just EOF).
     """
+    if type(prompt) is not str:
+        raise TypeError("prompt must be of type str")
     try:
-        if prompt is not None:
-            print(prompt, end="")
-        s = sys.stdin.readline()
-        if not s:
-            return None
-        return re.sub(r"(?:\r|\r\n|\n)$", "", s)
-    except KeyboardInterrupt:
-        sys.exit("")
-    except ValueError:
+        return input(prompt)
+    except EOFError:
         return None
