@@ -10,6 +10,7 @@ from distutils.sysconfig import get_python_lib
 from os.path import abspath, join
 from termcolor import colored
 from traceback import format_exception
+from multipledispatch import dispatch
 
 
 # Configure default logging handler and formatter
@@ -18,7 +19,8 @@ logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
 try:
     # Patch formatException
-    logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
+    logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(
+        *exc_info)
 except IndexError:
     pass
 
@@ -79,21 +81,26 @@ def _formatException(type, value, tb):
             lines += line
         else:
             matches = re.search(r"^(\s*)(.*?)(\s*)$", line, re.DOTALL)
-            lines.append(matches.group(1) + colored(matches.group(2), "yellow") + matches.group(3))
+            lines.append(matches.group(
+                1) + colored(matches.group(2), "yellow") + matches.group(3))
     return "".join(lines).rstrip()
 
 
-sys.excepthook = lambda type, value, tb: print(_formatException(type, value, tb), file=sys.stderr)
+sys.excepthook = lambda type, value, tb: print(
+    _formatException(type, value, tb), file=sys.stderr)
 
 
 def eprint(*args, **kwargs):
-    raise RuntimeError("The CS50 Library for Python no longer supports eprint, but you can use print instead!")
+    raise RuntimeError(
+        "The CS50 Library for Python no longer supports eprint, but you can use print instead!")
 
 
 def get_char(prompt):
-    raise RuntimeError("The CS50 Library for Python no longer supports get_char, but you can use get_string instead!")
+    raise RuntimeError(
+        "The CS50 Library for Python no longer supports get_char, but you can use get_string instead!")
 
 
+@dispatch(str)
 def get_float(prompt):
     """
     Read a line of text from standard input and return the equivalent float
@@ -111,6 +118,47 @@ def get_float(prompt):
                 pass
 
 
+@dispatch(str, float)
+def get_float(prompt, min):
+    """
+    Read a line of text from standard input and return the equivalent float within range specified;
+    as precisely as possible; if text does not represent a double, user is
+    prompted to retry. If line can't be read, return None.
+    """
+    while True:
+        s = get_string(prompt)
+        if s is None:
+            return None
+        if len(s) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", s):
+            try:
+                s = float(s)
+            except (OverflowError, ValueError):
+                pass
+            if s >= min:
+                return s
+
+
+@dispatch(str, float, float)
+def get_float(prompt, min, max):
+    """
+    Read a line of text from standard input and return the equivalent float within range specified;
+    as precisely as possible; if text does not represent a double, user is
+    prompted to retry. If line can't be read, return None.
+    """
+    while True:
+        s = get_string(prompt)
+        if s is None:
+            return None
+        if len(s) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", s):
+            try:
+                s = float(s)
+            except (OverflowError, ValueError):
+                pass
+            if s >= min and s <= max:
+                return s
+
+
+@dispatch(str)
 def get_int(prompt):
     """
     Read a line of text from standard input and return the equivalent int;
@@ -128,6 +176,46 @@ def get_int(prompt):
                 pass
 
 
+@dispatch(str, int)
+def get_int(prompt, min):
+    """
+    Read a line of text from standard input and return the equivalent int within range specified;
+    if text does not represent an int, user is prompted to retry. If line
+    can't be read, return None.
+    """
+    while True:
+        s = get_string(prompt)
+        if s is None:
+            return None
+        if re.search(r"^[+-]?\d+$", s):
+            try:
+                s = int(s, 10)
+            except ValueError:
+                pass
+            if s >= min:
+                return s
+
+
+@dispatch(str, int, int)
+def get_int(prompt, min, max):
+    """
+    Read a line of text from standard input and return the equivalent int within range specified;
+    if text does not represent an int, user is prompted to retry. If line
+    can't be read, return None.
+    """
+    while True:
+        s = get_string(prompt)
+        if s is None:
+            return None
+        if re.search(r"^[+-]?\d+$", s):
+            try:
+                s = int(s, 10)
+            except ValueError:
+                pass
+            if s >= min and s <= max:
+                return s
+
+
 def get_string(prompt):
     """
     Read a line of text from standard input and return it as a string,
@@ -141,3 +229,6 @@ def get_string(prompt):
         return input(prompt)
     except EOFError:
         return None
+
+
+get_float("enter", 5.1, 25.5)
