@@ -114,7 +114,7 @@ class SQL(object):
         import warnings
 
         # Parse statement, stripping comments and then leading/trailing whitespace
-        statements = sqlparse.parse(sqlparse.format(sql, keyword_case="upper", strip_comments=True).strip())
+        statements = sqlparse.parse(sqlparse.format(sql, strip_comments=True).strip())
 
         # Allow only one statement at a time, since SQLite doesn't support multiple
         # https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.execute
@@ -130,8 +130,9 @@ class SQL(object):
         # Infer command from (unflattened) statement
         for token in statements[0]:
             if token.ttype in [sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
-                if token.value in ["BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"]:
-                    command = token.value
+                token_value = token.value.upper()
+                if token_value in ["BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"]:
+                    command = token_value
                     break
         else:
             command = None
