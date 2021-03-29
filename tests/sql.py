@@ -129,6 +129,9 @@ class SQLTests(unittest.TestCase):
         self.db.execute("ROLLBACK")
         self.assertEqual(self.db.execute("SELECT val FROM cs50"), [])
 
+    def test_identifier_case(self):
+        self.assertIn("count", self.db.execute("SELECT 1 AS count")[0])
+
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
         self.db.execute("DROP TABLE IF EXISTS foo")
