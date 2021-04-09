@@ -63,7 +63,7 @@ class SQL:
             # Raise exceptions for warnings
             warnings.simplefilter("error")
             try:
-                return self._session.execute(statement)
+                result = self._session.execute(statement)
             except sqlalchemy.exc.IntegrityError as exc:
                 _logger.debug(termcolor.colored(str(statement), "yellow"))
                 raise ValueError(exc.orig) from None
@@ -73,6 +73,7 @@ class SQL:
                 raise RuntimeError(exc.orig) from None
 
             _logger.debug(termcolor.colored(str(statement), "green"))
+            return result
 
 
     def _get_last_val(self):
