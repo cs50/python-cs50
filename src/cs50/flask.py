@@ -2,18 +2,17 @@ import os
 import pkgutil
 import sys
 
+from distutils.version import StrictVersion
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 def _wrap_flask(f):
     if f is None:
         return
-
-    from distutils.version import StrictVersion
-    from .cs50 import _formatException
 
     if f.__version__ < StrictVersion("1.0"):
         return
 
     if os.getenv("CS50_IDE_TYPE") == "online":
-        from werkzeug.middleware.proxy_fix import ProxyFix
         _flask_init_before = f.Flask.__init__
         def _flask_init_after(self, *args, **kwargs):
             _flask_init_before(self, *args, **kwargs)
