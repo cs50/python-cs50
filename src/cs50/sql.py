@@ -15,11 +15,6 @@ class SQL:
     def __init__(self, url, **engine_kwargs):
         self._session = Session(url, **engine_kwargs)
         self._autocommit = False
-        self._test_database()
-
-
-    def _test_database(self):
-        self.execute("SELECT 1")
 
 
     def execute(self, sql, *args, **kwargs):
@@ -85,9 +80,8 @@ class SQL:
 
     def init_app(self, app):
         @app.teardown_appcontext
-        def shutdown_session(res_or_exc):
+        def shutdown_session(_):
             self._session.remove()
-            return res_or_exc
 
         logging.getLogger("cs50").disabled = False
 
