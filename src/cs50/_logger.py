@@ -8,6 +8,16 @@ import termcolor
 
 
 def _setup_logger():
+    # Configure default logging handler and formatter
+    # Prevent flask, werkzeug, etc from adding default handler
+    logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
+
+    try:
+        # Patch formatException
+        logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
+    except IndexError:
+        pass
+
     _logger = logging.getLogger("cs50")
     _logger.disabled = True
     _logger.setLevel(logging.DEBUG)
@@ -22,6 +32,8 @@ def _setup_logger():
     formatter.formatException = lambda exc_info: _formatException(*exc_info)
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
+
+    sys.excepthook = lambda type, value, tb: print(_formatException(type, value, tb), file=sys.stderr)
 
 
 def _formatException(type, value, tb):
@@ -44,5 +56,3 @@ def _formatException(type, value, tb):
             matches = re.search(r"^(\s*)(.*?)(\s*)$", line, re.DOTALL)
             lines.append(matches.group(1) + termcolor.colored(matches.group(2), "yellow") + matches.group(3))
     return "".join(lines).rstrip()
-
-
