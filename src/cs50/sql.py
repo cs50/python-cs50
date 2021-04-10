@@ -15,7 +15,7 @@ class SQL:
     def __init__(self, url, **engine_kwargs):
         self._session = Session(url, **engine_kwargs)
         self._dialect = self._session.get_bind().dialect
-        self._is_postgres = self._dialect in {"postgres", "postgresql"}
+        self._is_postgres = self._dialect.name in {"postgres", "postgresql"}
         self._autocommit = False
 
 
