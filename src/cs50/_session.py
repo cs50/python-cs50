@@ -6,18 +6,12 @@ import sqlite3
 
 class Session:
     def __init__(self, url, **engine_kwargs):
-        self._url = url
-        if _is_sqlite_url(self._url):
-            _assert_sqlite_file_exists(self._url)
+        if _is_sqlite_url(url):
+            _assert_sqlite_file_exists(url)
 
-        self._engine = _create_engine(self._url, **engine_kwargs)
-        self._is_postgres = self._engine.url.get_backend_name() in {"postgres", "postgresql"}
-        _setup_on_connect(self._engine)
-        self._session = _create_scoped_session(self._engine)
-
-
-    def is_postgres(self):
-        return self._is_postgres
+        engine = _create_engine(url, **engine_kwargs)
+        _setup_on_connect(engine)
+        self._session = _create_scoped_session(engine)
 
 
     def execute(self, statement):

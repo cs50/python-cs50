@@ -24,10 +24,10 @@ class Statement:
     def _parse(self):
         formatted_statements = sqlparse.format(self._sql, strip_comments=True).strip()
         parsed_statements = sqlparse.parse(formatted_statements)
-        num_of_statements = len(parsed_statements)
-        if num_of_statements == 0:
+        statement_count = len(parsed_statements)
+        if statement_count == 0:
             raise RuntimeError("missing statement")
-        elif num_of_statements > 1:
+        elif statement_count > 1:
             raise RuntimeError("too many statements at once")
 
         return parsed_statements[0]
@@ -35,9 +35,9 @@ class Statement:
 
     def _parse_command(self):
         for token in self._statement:
-            if token.ttype in [sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
+            if _is_command_token(token):
                 token_value = token.value.upper()
-                if token_value in ["BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"]:
+                if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
                     command = token_value
                     break
         else:
@@ -49,11 +49,11 @@ class Statement:
     def _bind_params(self):
         tokens = self._tokenize()
         paramstyle, placeholders = self._parse_placeholders(tokens)
-        if paramstyle in [Paramstyle.FORMAT, Paramstyle.QMARK]:
+        if paramstyle in {Paramstyle.FORMAT, Paramstyle.QMARK}:
             tokens = self._bind_format_or_qmark(placeholders, tokens)
         elif paramstyle == Paramstyle.NUMERIC:
             tokens = self._bind_numeric(placeholders, tokens)
-        if paramstyle in [Paramstyle.NAMED, Paramstyle.PYFORMAT]:
+        if paramstyle in {Paramstyle.NAMED, Paramstyle.PYFORMAT}:
             tokens = self._bind_named_or_pyformat(placeholders, tokens)
 
         tokens = _escape_verbatim_colons(tokens)
@@ -154,10 +154,10 @@ class Statement:
                 sqlalchemy.types.Boolean().literal_processor(self._dialect)(value))
 
         if isinstance(value, bytes):
-            if self._dialect.name in ["mysql", "sqlite"]:
+            if self._dialect.name in {"mysql", "sqlite"}:
                 # https://dev.mysql.com/doc/refman/8.0/en/hexadecimal-literals.html
                 return sqlparse.sql.Token(sqlparse.tokens.Other, f"x'{value.hex()}'")
-            if self._dialect.name in ["postgres", "postgresql"]:
+            if self._dialect.name in {"postgres", "postgresql"}:
                 # https://dba.stackexchange.com/a/203359
                 return sqlparse.sql.Token(sqlparse.tokens.Other, f"'\\x{value.hex()}'")
 
@@ -235,7 +235,7 @@ def _parse_placeholder(token):
     if token.value == "%s":
         return Paramstyle.FORMAT, None
 
-    # E.g., %(foo)
+    # E.g., %(foo)s
     matches = re.search(r"%\((\w+)\)s$", token.value)
     if matches:
         return Paramstyle.PYFORMAT, matches.group(1)
@@ -251,6 +251,10 @@ def _escape_verbatim_colons(tokens):
             token.value = re.sub("(^\"|\s+):", r"\1\:", token.value)
 
     return tokens
+
+
+def _is_command_token(token):
+    return token.ttype in {sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML}
 
 
 def _is_string_literal(token):

@@ -14,14 +14,16 @@ _logger = logging.getLogger("cs50")
 class SQL:
     def __init__(self, url, **engine_kwargs):
         self._session = Session(url, **engine_kwargs)
+        self._dialect = self._session.get_bind().dialect
+        self._is_postgres = self._dialect in {"postgres", "postgresql"}
         self._autocommit = False
 
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
-        statement = Statement(self._session.get_bind().dialect, sql, *args, **kwargs)
+        statement = Statement(self._dialect, sql, *args, **kwargs)
         command = statement.get_command()
-        if command in ["BEGIN", "START"]:
+        if command in {"BEGIN", "START"}:
             self._autocommit = False
 
         if self._autocommit:
@@ -33,18 +35,15 @@ class SQL:
             self._session.execute("COMMIT")
             self._session.remove()
 
-        if command in ["COMMIT", "ROLLBACK"]:
+        if command in {"COMMIT", "ROLLBACK"}:
             self._autocommit = True
             self._session.remove()
 
         if command == "SELECT":
             ret = _fetch_select_result(result)
         elif command == "INSERT":
-            if self._session.is_postgres():
-                ret = self._get_last_val()
-            else:
-                ret = result.lastrowid if result.rowcount == 1 else None
-        elif command in ["DELETE", "UPDATE"]:
+            ret = self._last_row_id_or_none(result)
+        elif command in {"DELETE", "UPDATE"}:
             ret = result.rowcount
         else:
             ret = True
@@ -69,6 +68,16 @@ class SQL:
 
             _logger.debug(termcolor.colored(str(statement), "green"))
             return result
+
+
+    def _last_row_id_or_none(self, result):
+        if self.is_postgres():
+            return self._get_last_val()
+        return result.lastrowid if result.rowcount == 1 else None
+
+
+    def is_postgres(self):
+        return self._is_postgres
 
 
     def _get_last_val(self):
