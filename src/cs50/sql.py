@@ -1,3 +1,5 @@
+"""Wraps SQLAlchemy"""
+
 import decimal
 import logging
 import warnings
@@ -12,6 +14,7 @@ _logger = logging.getLogger("cs50")
 
 
 class SQL:
+    """Wraps SQLAlchemy"""
     def __init__(self, url, **engine_kwargs):
         self._session = Session(url, **engine_kwargs)
         self._dialect = self._session.get_bind().dialect
@@ -71,13 +74,9 @@ class SQL:
 
 
     def _last_row_id_or_none(self, result):
-        if self.is_postgres():
+        if self._is_postgres:
             return self._get_last_val()
         return result.lastrowid if result.rowcount == 1 else None
-
-
-    def is_postgres(self):
-        return self._is_postgres
 
 
     def _get_last_val(self):
@@ -88,8 +87,9 @@ class SQL:
 
 
     def init_app(self, app):
+        """Registers a teardown_appcontext listener to remove session and enables logging"""
         @app.teardown_appcontext
-        def shutdown_session(_):
+        def _(_):
             self._session.remove()
 
         logging.getLogger("cs50").disabled = False

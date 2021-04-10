@@ -1,3 +1,5 @@
+"""Parses a SQL statement and binds its parameters"""
+
 import collections
 import datetime
 import enum
@@ -8,6 +10,7 @@ import sqlparse
 
 
 class Statement:
+    """Parses and binds a SQL statement"""
     def __init__(self, dialect, sql, *args, **kwargs):
         if len(args) > 0 and len(kwargs) > 0:
             raise RuntimeError("cannot pass both positional and named parameters")
@@ -21,13 +24,14 @@ class Statement:
         self._command = self._parse_command()
         self._tokens = self._bind_params()
 
+
     def _parse(self):
         formatted_statements = sqlparse.format(self._sql, strip_comments=True).strip()
         parsed_statements = sqlparse.parse(formatted_statements)
         statement_count = len(parsed_statements)
         if statement_count == 0:
             raise RuntimeError("missing statement")
-        elif statement_count > 1:
+        if statement_count > 1:
             raise RuntimeError("too many statements at once")
 
         return parsed_statements[0]
@@ -49,11 +53,11 @@ class Statement:
     def _bind_params(self):
         tokens = self._tokenize()
         paramstyle, placeholders = self._parse_placeholders(tokens)
-        if paramstyle in {Paramstyle.FORMAT, Paramstyle.QMARK}:
+        if paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
             tokens = self._bind_format_or_qmark(placeholders, tokens)
-        elif paramstyle == Paramstyle.NUMERIC:
+        elif paramstyle == _Paramstyle.NUMERIC:
             tokens = self._bind_numeric(placeholders, tokens)
-        if paramstyle in {Paramstyle.NAMED, Paramstyle.PYFORMAT}:
+        if paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
             tokens = self._bind_named_or_pyformat(placeholders, tokens)
 
         tokens = _escape_verbatim_colons(tokens)
@@ -86,9 +90,9 @@ class Statement:
     def _default_paramstyle(self):
         paramstyle = None
         if self._args:
-            paramstyle = Paramstyle.QMARK
+            paramstyle = _Paramstyle.QMARK
         elif self._kwargs:
-            paramstyle = Paramstyle.NAMED
+            paramstyle = _Paramstyle.NAMED
 
         return paramstyle
 
@@ -118,8 +122,10 @@ class Statement:
             unused_arg_indices.remove(num)
 
         if len(unused_arg_indices) > 0:
-            unused_args = ", ".join([str(self._escape(self._args[i])) for i in sorted(unused_arg_indices)])
-            raise RuntimeError(f"unused value{'' if len(unused_arg_indices) == 1 else 's'} ({unused_args})")
+            unused_args = ", ".join(
+                [str(self._escape(self._args[i])) for i in sorted(unused_arg_indices)])
+            raise RuntimeError(
+                f"unused value{'' if len(unused_arg_indices) == 1 else 's'} ({unused_args})")
 
         return tokens
 
@@ -134,7 +140,9 @@ class Statement:
             unused_params.remove(param_name)
 
         if len(unused_params) > 0:
-            raise RuntimeError("unused value{'' if len(unused_params) == 1 else 's'} ({', '.join(sorted(unused_params))})")
+            joined_unused_params = ", ".join(sorted(unused_params))
+            raise RuntimeError(
+                f"unused value{'' if len(unused_params) == 1 else 's'} ({joined_unused_params})")
 
         return tokens
 
@@ -144,7 +152,7 @@ class Statement:
         Escapes value using engine's conversion function.
         https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
         """
-
+        # pylint: disable=too-many-return-statements
         if isinstance(value, (list, tuple)):
             return self._escape_iterable(value)
 
@@ -163,20 +171,18 @@ class Statement:
 
             raise RuntimeError(f"unsupported value: {value}")
 
+        string_processor = sqlalchemy.types.String().literal_processor(self._dialect)
         if isinstance(value, datetime.date):
             return sqlparse.sql.Token(
-                sqlparse.tokens.String,
-                sqlalchemy.types.String().literal_processor(self._dialect)(value.strftime("%Y-%m-%d")))
+                sqlparse.tokens.String, string_processor(value.strftime("%Y-%m-%d")))
 
         if isinstance(value, datetime.datetime):
             return sqlparse.sql.Token(
-                sqlparse.tokens.String,
-                sqlalchemy.types.String().literal_processor(self._dialect)(value.strftime("%Y-%m-%d %H:%M:%S")))
+                sqlparse.tokens.String, string_processor(value.strftime("%Y-%m-%d %H:%M:%S")))
 
         if isinstance(value, datetime.time):
             return sqlparse.sql.Token(
-                sqlparse.tokens.String,
-                sqlalchemy.types.String().literal_processor(self._dialect)(value.strftime("%H:%M:%S")))
+                sqlparse.tokens.String, string_processor(value.strftime("%H:%M:%S")))
 
         if isinstance(value, float):
             return sqlparse.sql.Token(
@@ -189,9 +195,7 @@ class Statement:
                 sqlalchemy.types.Integer().literal_processor(self._dialect)(value))
 
         if isinstance(value, str):
-            return sqlparse.sql.Token(
-                sqlparse.tokens.String,
-                sqlalchemy.types.String().literal_processor(self._dialect)(value))
+            return sqlparse.sql.Token(sqlparse.tokens.String, string_processor(value))
 
         if value is None:
             return sqlparse.sql.Token(
@@ -207,6 +211,7 @@ class Statement:
 
 
     def get_command(self):
+        """Returns statement command (e.g., SELECT) or None"""
         return self._command
 
 
@@ -220,25 +225,25 @@ def _is_placeholder(token):
 
 def _parse_placeholder(token):
     if token.value == "?":
-        return Paramstyle.QMARK, None
+        return _Paramstyle.QMARK, None
 
     # E.g., :1
     matches = re.search(r"^:([1-9]\d*)$", token.value)
     if matches:
-        return Paramstyle.NUMERIC, int(matches.group(1)) - 1
+        return _Paramstyle.NUMERIC, int(matches.group(1)) - 1
 
     # E.g., :foo
     matches = re.search(r"^:([a-zA-Z]\w*)$", token.value)
     if matches:
-        return Paramstyle.NAMED, matches.group(1)
+        return _Paramstyle.NAMED, matches.group(1)
 
     if token.value == "%s":
-        return Paramstyle.FORMAT, None
+        return _Paramstyle.FORMAT, None
 
     # E.g., %(foo)s
     matches = re.search(r"%\((\w+)\)s$", token.value)
     if matches:
-        return Paramstyle.PYFORMAT, matches.group(1)
+        return _Paramstyle.PYFORMAT, matches.group(1)
 
     raise RuntimeError(f"{token.value}: invalid placeholder")
 
@@ -246,15 +251,16 @@ def _parse_placeholder(token):
 def _escape_verbatim_colons(tokens):
     for token in tokens:
         if _is_string_literal(token):
-            token.value = re.sub("(^'|\s+):", r"\1\:", token.value)
+            token.value = re.sub(r"(^'|\s+):", r"\1\:", token.value)
         elif _is_identifier(token):
-            token.value = re.sub("(^\"|\s+):", r"\1\:", token.value)
+            token.value = re.sub(r"(^\"|\s+):", r"\1\:", token.value)
 
     return tokens
 
 
 def _is_command_token(token):
-    return token.ttype in {sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML}
+    return token.ttype in {
+        sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML}
 
 
 def _is_string_literal(token):
@@ -265,7 +271,7 @@ def _is_identifier(token):
     return token.ttype == sqlparse.tokens.Literal.String.Symbol
 
 
-class Paramstyle(enum.Enum):
+class _Paramstyle(enum.Enum):
     FORMAT = enum.auto()
     NAMED = enum.auto()
     NUMERIC = enum.auto()

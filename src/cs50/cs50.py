@@ -1,3 +1,5 @@
+"""Exposes simple API for getting and validating user input"""
+
 import re
 import sys
 
@@ -16,14 +18,14 @@ def get_float(prompt):
 
 
 def _get_float(prompt):
-    s = get_string(prompt)
-    if s is None:
-        return
+    user_input = get_string(prompt)
+    if user_input is None:
+        return None
 
-    if len(s) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", s):
-        return float(s)
+    if len(user_input) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", user_input):
+        return float(user_input)
 
-    raise ValueError(f"invalid float literal: {s}")
+    raise ValueError(f"invalid float literal: {user_input}")
 
 
 def get_int(prompt):
@@ -40,14 +42,14 @@ def get_int(prompt):
 
 
 def _get_int(prompt):
-    s = get_string(prompt)
-    if s is None:
-        return
+    user_input = get_string(prompt)
+    if user_input is None:
+        return None
 
-    if re.search(r"^[+-]?\d+$", s):
-        return int(s, 10)
+    if re.search(r"^[+-]?\d+$", user_input):
+        return int(user_input, 10)
 
-    raise ValueError(f"invalid int literal for base 10: {s}")
+    raise ValueError(f"invalid int literal for base 10: {user_input}")
 
 
 def get_string(prompt):
@@ -57,13 +59,13 @@ def get_string(prompt):
     as line endings. If user inputs only a line ending, returns "", not None.
     Returns None upon error or no input whatsoever (i.e., just EOF).
     """
-    if type(prompt) is not str:
+    if not isinstance(prompt, str):
         raise TypeError("prompt must be of type str")
 
     try:
         return _get_input(prompt)
     except EOFError:
-        return
+        return None
 
 
 def _get_input(prompt):
@@ -76,18 +78,20 @@ class _flushfile():
     http://stackoverflow.com/a/231216
     """
 
-    def __init__(self, f):
-        self.f = f
+    def __init__(self, stream):
+        self.stream = stream
 
     def __getattr__(self, name):
-        return object.__getattribute__(self.f, name)
+        return object.__getattribute__(self.stream, name)
 
-    def write(self, x):
-        self.f.write(x)
-        self.f.flush()
+    def write(self, data):
+        """Writes data to stream"""
+        self.stream.write(data)
+        self.stream.flush()
 
-def disable_buffering():
+def disable_output_buffering():
+    """Disables output buffering to prevent prompts from being buffered"""
     sys.stderr = _flushfile(sys.stderr)
     sys.stdout = _flushfile(sys.stdout)
 
-disable_buffering()
+disable_output_buffering()

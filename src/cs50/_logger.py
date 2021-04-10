@@ -1,3 +1,5 @@
+"""Sets up logging for cs50 library"""
+
 import logging
 import os.path
 import re
@@ -14,7 +16,8 @@ def _setup_logger():
 
     try:
         # Patch formatException
-        logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
+        formatter = logging.root.handlers[0].formatter
+        formatter.formatException = lambda exc_info: _format_exception(*exc_info)
     except IndexError:
         pass
 
@@ -29,14 +32,15 @@ def _setup_logger():
     handler.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter("%(levelname)s: %(message)s")
-    formatter.formatException = lambda exc_info: _formatException(*exc_info)
+    formatter.formatException = lambda exc_info: _format_exception(*exc_info)
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
 
-    sys.excepthook = lambda type, value, tb: print(_formatException(type, value, tb), file=sys.stderr)
+    sys.excepthook = lambda type_, value, exc_tb: print(
+        _format_exception(type_, value, exc_tb), file=sys.stderr)
 
 
-def _formatException(type, value, tb):
+def _format_exception(type_, value, exc_tb):
     """
     Format traceback, darkening entries from global site-packages directories
     and user-specific site-packages directory.
@@ -48,11 +52,12 @@ def _formatException(type, value, tb):
 
     # Highlight lines not referring to files in site-packages
     lines = []
-    for line in traceback.format_exception(type, value, tb):
+    for line in traceback.format_exception(type_, value, exc_tb):
         matches = re.search(r"^  File \"([^\"]+)\", line \d+, in .+", line)
         if matches and matches.group(1).startswith(packages):
             lines += line
         else:
             matches = re.search(r"^(\s*)(.*?)(\s*)$", line, re.DOTALL)
-            lines.append(matches.group(1) + termcolor.colored(matches.group(2), "yellow") + matches.group(3))
+            lines.append(
+                matches.group(1) + termcolor.colored(matches.group(2), "yellow") + matches.group(3))
     return "".join(lines).rstrip()

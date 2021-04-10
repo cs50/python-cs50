@@ -1,8 +1,10 @@
+"""Wraps a SQLAlchemy scoped session"""
+
 import os
+import sqlite3
 
 import sqlalchemy
 import sqlalchemy.orm
-import sqlite3
 
 class Session:
     """Wraps a SQLAlchemy scoped session"""
@@ -14,6 +16,8 @@ class Session:
 
 
     def execute(self, statement):
+        """Converts statement to str and executes it"""
+        # pylint: disable=no-member
         return self._session.execute(sqlalchemy.text(str(statement)))
 
 
