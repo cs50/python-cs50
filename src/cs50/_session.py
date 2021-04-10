@@ -5,13 +5,12 @@ import sqlalchemy.orm
 import sqlite3
 
 class Session:
+    """Wraps a SQLAlchemy scoped session"""
     def __init__(self, url, **engine_kwargs):
         if _is_sqlite_url(url):
             _assert_sqlite_file_exists(url)
 
-        engine = _create_engine(url, **engine_kwargs)
-        _setup_on_connect(engine)
-        self._session = _create_scoped_session(engine)
+        self._session = _create_session(url, **engine_kwargs)
 
 
     def execute(self, statement):
@@ -32,6 +31,12 @@ def _assert_sqlite_file_exists(url):
         raise RuntimeError(f"does not exist: {path}")
     if not os.path.isfile(path):
         raise RuntimeError(f"not a file: {path}")
+
+
+def _create_session(url, **engine_kwargs):
+    engine = _create_engine(url, **engine_kwargs)
+    _setup_on_connect(engine)
+    return _create_scoped_session(engine)
 
 
 def _create_engine(url, **kwargs):
