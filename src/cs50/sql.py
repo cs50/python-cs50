@@ -25,8 +25,8 @@ class SQL:
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
         statement = Statement(self._dialect, sql, *args, **kwargs)
-        command = statement.get_command()
-        if command in {"BEGIN", "START"}:
+        operation_keyword = statement.get_operation_keyword()
+        if operation_keyword in {"BEGIN", "START"}:
             self._autocommit = False
 
         if self._autocommit:
@@ -38,15 +38,15 @@ class SQL:
             self._session.execute("COMMIT")
             self._session.remove()
 
-        if command in {"COMMIT", "ROLLBACK"}:
+        if operation_keyword in {"COMMIT", "ROLLBACK"}:
             self._autocommit = True
             self._session.remove()
 
-        if command == "SELECT":
+        if operation_keyword == "SELECT":
             ret = _fetch_select_result(result)
-        elif command == "INSERT":
+        elif operation_keyword == "INSERT":
             ret = self._last_row_id_or_none(result)
-        elif command in {"DELETE", "UPDATE"}:
+        elif operation_keyword in {"DELETE", "UPDATE"}:
             ret = result.rowcount
         else:
             ret = True

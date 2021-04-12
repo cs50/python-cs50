@@ -21,7 +21,7 @@ class Statement:
         self._kwargs = kwargs
 
         self._statement = self._parse()
-        self._command = self._parse_command()
+        self._operation_keyword = self._get_operation_keyword()
         self._tokens = self._bind_params()
 
 
@@ -37,17 +37,17 @@ class Statement:
         return parsed_statements[0]
 
 
-    def _parse_command(self):
+    def _get_operation_keyword(self):
         for token in self._statement:
-            if _is_command_token(token):
+            if _is_operation_token(token):
                 token_value = token.value.upper()
                 if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
-                    command = token_value
+                    operation_keyword = token_value
                     break
         else:
-            command = None
+            operation_keyword = None
 
-        return command
+        return operation_keyword
 
 
     def _bind_params(self):
@@ -210,9 +210,9 @@ class Statement:
             sqlparse.parse(", ".join([str(self._escape(v)) for v in iterable])))
 
 
-    def get_command(self):
-        """Returns statement command (e.g., SELECT) or None"""
-        return self._command
+    def get_operation_keyword(self):
+        """Returns the operation keyword of the statement (e.g., SELECT) if found, or None"""
+        return self._operation_keyword
 
 
     def __str__(self):
@@ -258,7 +258,7 @@ def _escape_verbatim_colons(tokens):
     return tokens
 
 
-def _is_command_token(token):
+def _is_operation_token(token):
     return token.ttype in {
         sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML}
 
