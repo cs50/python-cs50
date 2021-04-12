@@ -1,4 +1,4 @@
-"""Parses a SQL statement and binds its parameters"""
+"""Parses a SQL statement and replaces placeholders with parameters"""
 
 import collections
 import datetime
@@ -10,7 +10,7 @@ import sqlparse
 
 
 class Statement:
-    """Parses and binds a SQL statement"""
+    """Parses a SQL statement and replaces placeholders with parameters"""
     def __init__(self, dialect, sql, *args, **kwargs):
         if len(args) > 0 and len(kwargs) > 0:
             raise RuntimeError("cannot pass both positional and named parameters")
@@ -22,7 +22,7 @@ class Statement:
 
         self._statement = self._parse()
         self._operation_keyword = self._get_operation_keyword()
-        self._tokens = self._bind_params()
+        self._tokens = self._replace_placeholders_with_params()
 
 
     def _parse(self):
@@ -50,15 +50,15 @@ class Statement:
         return operation_keyword
 
 
-    def _bind_params(self):
+    def _replace_placeholders_with_params(self):
         tokens = self._tokenize()
         paramstyle, placeholders = self._parse_placeholders(tokens)
         if paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
-            tokens = self._bind_format_or_qmark(placeholders, tokens)
+            tokens = self._replace_format_or_qmark_placeholders(placeholders, tokens)
         elif paramstyle == _Paramstyle.NUMERIC:
-            tokens = self._bind_numeric(placeholders, tokens)
+            tokens = self._replace_numeric_placeholders(placeholders, tokens)
         if paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
-            tokens = self._bind_named_or_pyformat(placeholders, tokens)
+            tokens = self._replace_named_or_pyformat_placeholders(placeholders, tokens)
 
         tokens = _escape_verbatim_colons(tokens)
         return tokens
@@ -97,7 +97,7 @@ class Statement:
         return paramstyle
 
 
-    def _bind_format_or_qmark(self, placeholders, tokens):
+    def _replace_format_or_qmark_placeholders(self, placeholders, tokens):
         if len(placeholders) != len(self._args):
             _placeholders = ", ".join([str(token) for token in placeholders.values()])
             _args = ", ".join([str(self._escape(arg)) for arg in self._args])
@@ -112,7 +112,7 @@ class Statement:
         return tokens
 
 
-    def _bind_numeric(self, placeholders, tokens):
+    def _replace_numeric_placeholders(self, placeholders, tokens):
         unused_arg_indices = set(range(len(self._args)))
         for token_index, num in placeholders.items():
             if num >= len(self._args):
@@ -130,7 +130,7 @@ class Statement:
         return tokens
 
 
-    def _bind_named_or_pyformat(self, placeholders, tokens):
+    def _replace_named_or_pyformat_placeholders(self, placeholders, tokens):
         unused_params = set(self._kwargs.keys())
         for token_index, param_name in placeholders.items():
             if param_name not in self._kwargs:
