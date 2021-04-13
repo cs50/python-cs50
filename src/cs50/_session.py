@@ -4,9 +4,9 @@ import sqlalchemy
 import sqlalchemy.orm
 
 from ._session_util import (
-    _is_sqlite_url,
-    _assert_sqlite_file_exists,
-    _create_session,
+    is_sqlite_url,
+    assert_sqlite_file_exists,
+    create_session,
 )
 
 
@@ -14,10 +14,10 @@ class Session:
     """Wraps a SQLAlchemy scoped session"""
 
     def __init__(self, url, **engine_kwargs):
-        if _is_sqlite_url(url):
-            _assert_sqlite_file_exists(url)
+        if is_sqlite_url(url):
+            assert_sqlite_file_exists(url)
 
-        self._session = _create_session(url, **engine_kwargs)
+        self._session = create_session(url, **engine_kwargs)
 
     def execute(self, statement):
         """Converts statement to str and executes it"""

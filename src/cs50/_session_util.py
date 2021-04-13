@@ -5,11 +5,11 @@ import sqlite3
 
 import sqlalchemy
 
-def _is_sqlite_url(url):
+def is_sqlite_url(url):
     return url.startswith("sqlite:///")
 
 
-def _assert_sqlite_file_exists(url):
+def assert_sqlite_file_exists(url):
     path = url[len("sqlite:///"):]
     if not os.path.exists(path):
         raise RuntimeError(f"does not exist: {path}")
@@ -17,7 +17,7 @@ def _assert_sqlite_file_exists(url):
         raise RuntimeError(f"not a file: {path}")
 
 
-def _create_session(url, **engine_kwargs):
+def create_session(url, **engine_kwargs):
     engine = _create_engine(url, **engine_kwargs)
     _setup_on_connect(engine)
     return _create_scoped_session(engine)

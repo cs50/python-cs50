@@ -4,14 +4,14 @@ import collections
 
 from ._sql_sanitizer import SQLSanitizer, escape_verbatim_colon
 from ._statement_util import (
-    _format_and_parse,
-    _get_human_readable_list,
-    _is_identifier,
-    _is_operation_token,
-    _is_placeholder,
-    _is_string_literal,
-    _Paramstyle,
-    _parse_placeholder,
+    format_and_parse,
+    get_human_readable_list,
+    is_identifier,
+    is_operation_token,
+    is_placeholder,
+    is_string_literal,
+    Paramstyle,
+    parse_placeholder,
 )
 
 
@@ -27,7 +27,7 @@ class Statement:
         self._args = self._get_escaped_args(args)
         self._kwargs = self._get_escaped_kwargs(kwargs)
 
-        self._statement = _format_and_parse(sql)
+        self._statement = format_and_parse(sql)
         self._tokens = self._tokenize()
 
         self._operation_keyword = self._get_operation_keyword()
@@ -48,7 +48,7 @@ class Statement:
 
     def _get_operation_keyword(self):
         for token in self._statement:
-            if _is_operation_token(token.ttype):
+            if is_operation_token(token.ttype):
                 token_value = token.value.upper()
                 if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
                     operation_keyword = token_value
@@ -61,8 +61,8 @@ class Statement:
     def _get_paramstyle(self):
         paramstyle = None
         for token in self._tokens:
-            if _is_placeholder(token.ttype):
-                paramstyle, _ = _parse_placeholder(token.value)
+            if is_placeholder(token.ttype):
+                paramstyle, _ = parse_placeholder(token.value)
                 break
         else:
             paramstyle = self._default_paramstyle()
@@ -72,17 +72,17 @@ class Statement:
     def _default_paramstyle(self):
         paramstyle = None
         if self._args:
-            paramstyle = _Paramstyle.QMARK
+            paramstyle = Paramstyle.QMARK
         elif self._kwargs:
-            paramstyle = _Paramstyle.NAMED
+            paramstyle = Paramstyle.NAMED
 
         return paramstyle
 
     def _get_placeholders(self):
         placeholders = collections.OrderedDict()
         for index, token in enumerate(self._tokens):
-            if _is_placeholder(token.ttype):
-                paramstyle, name = _parse_placeholder(token.value)
+            if is_placeholder(token.ttype):
+                paramstyle, name = parse_placeholder(token.value)
                 if paramstyle != self._paramstyle:
                     raise RuntimeError("inconsistent paramstyle")
 
@@ -91,11 +91,11 @@ class Statement:
         return placeholders
 
     def _plugin_escaped_params(self):
-        if self._paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
+        if self._paramstyle in {Paramstyle.FORMAT, Paramstyle.QMARK}:
             self._plugin_format_or_qmark_params()
-        elif self._paramstyle == _Paramstyle.NUMERIC:
+        elif self._paramstyle == Paramstyle.NUMERIC:
             self._plugin_numeric_params()
-        if self._paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
+        if self._paramstyle in {Paramstyle.NAMED, Paramstyle.PYFORMAT}:
             self._plugin_named_or_pyformat_params()
 
     def _plugin_format_or_qmark_params(self):
@@ -105,8 +105,8 @@ class Statement:
 
     def _assert_valid_arg_count(self):
         if len(self._placeholders) != len(self._args):
-            placeholders = _get_human_readable_list(self._placeholders.values())
-            args = _get_human_readable_list(self._args)
+            placeholders = get_human_readable_list(self._placeholders.values())
+            args = get_human_readable_list(self._args)
             if len(self._placeholders) < len(self._args):
                 raise RuntimeError(f"fewer placeholders ({placeholders}) than values ({args})")
 
@@ -122,7 +122,7 @@ class Statement:
             unused_arg_indices.remove(num)
 
         if len(unused_arg_indices) > 0:
-            unused_args = _get_human_readable_list(
+            unused_args = get_human_readable_list(
                 [self._args[i] for i in sorted(unused_arg_indices)])
             raise RuntimeError(
                 f"unused value{'' if len(unused_args) == 1 else 's'} ({unused_args})")
@@ -137,13 +137,13 @@ class Statement:
             unused_params.remove(param_name)
 
         if len(unused_params) > 0:
-            joined_unused_params = _get_human_readable_list(sorted(unused_params))
+            joined_unused_params = get_human_readable_list(sorted(unused_params))
             raise RuntimeError(
                 f"unused value{'' if len(unused_params) == 1 else 's'} ({joined_unused_params})")
 
     def _escape_verbatim_colons(self):
         for token in self._tokens:
-            if _is_string_literal(token.ttype) or _is_identifier(token.ttype):
+            if is_string_literal(token.ttype) or is_identifier(token.ttype):
                 token.value = escape_verbatim_colon(token.value)
 
     def get_operation_keyword(self):
