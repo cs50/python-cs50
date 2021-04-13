@@ -10,17 +10,26 @@ import termcolor
 
 
 def _setup_logger():
-    # Configure default logging handler and formatter
-    # Prevent flask, werkzeug, etc from adding default handler
+    _configure_default_logger()
+    _patch_root_handler_format_exception()
+    _configure_cs50_logger()
+    _patch_excepthook()
+
+
+def _configure_default_logger():
+    """Configure default handler and formatter to prevent flask and werkzeug from adding theirs"""
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
+
+def _patch_root_handler_format_exception():
     try:
-        # Patch formatException
         formatter = logging.root.handlers[0].formatter
         formatter.formatException = lambda exc_info: _format_exception(*exc_info)
     except IndexError:
         pass
 
+
+def _configure_cs50_logger():
     _logger = logging.getLogger("cs50")
     _logger.disabled = True
     _logger.setLevel(logging.DEBUG)
@@ -36,6 +45,8 @@ def _setup_logger():
     handler.setFormatter(formatter)
     _logger.addHandler(handler)
 
+
+def _patch_excepthook():
     sys.excepthook = lambda type_, value, exc_tb: print(
         _format_exception(type_, value, exc_tb), file=sys.stderr)
 
