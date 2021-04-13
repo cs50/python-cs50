@@ -31,15 +31,6 @@ class Statement:
         return list(self._statement.flatten())
 
 
-    def _plugin_escaped_params(self):
-        if self._paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
-            self._plugin_format_or_qmark_params()
-        elif self._paramstyle == _Paramstyle.NUMERIC:
-            self._plugin_numeric_params()
-        if self._paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
-            self._plugin_named_or_pyformat_params()
-
-
     def _get_paramstyle(self):
         paramstyle = None
         for token in self._tokens:
@@ -49,6 +40,16 @@ class Statement:
 
         if paramstyle is None:
             paramstyle = self._default_paramstyle()
+
+        return paramstyle
+
+
+    def _default_paramstyle(self):
+        paramstyle = None
+        if self._args:
+            paramstyle = _Paramstyle.QMARK
+        elif self._kwargs:
+            paramstyle = _Paramstyle.NAMED
 
         return paramstyle
 
@@ -66,14 +67,13 @@ class Statement:
         return placeholders
 
 
-    def _default_paramstyle(self):
-        paramstyle = None
-        if self._args:
-            paramstyle = _Paramstyle.QMARK
-        elif self._kwargs:
-            paramstyle = _Paramstyle.NAMED
-
-        return paramstyle
+    def _plugin_escaped_params(self):
+        if self._paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
+            self._plugin_format_or_qmark_params()
+        elif self._paramstyle == _Paramstyle.NUMERIC:
+            self._plugin_numeric_params()
+        if self._paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
+            self._plugin_named_or_pyformat_params()
 
 
     def _plugin_format_or_qmark_params(self):
