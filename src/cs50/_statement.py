@@ -16,15 +16,19 @@ class Statement:
             raise RuntimeError("cannot pass both positional and named parameters")
 
         self._sql_sanitizer = SQLSanitizer(dialect)
+
         self._args = self._get_escaped_args(args)
         self._kwargs = self._get_escaped_kwargs(kwargs)
+
         self._statement = _format_and_parse(sql)
         self._tokens = self._tokenize()
+
+        self._operation_keyword = self._get_operation_keyword()
+
         self._paramstyle = self._get_paramstyle()
         self._placeholders = self._get_placeholders()
         self._plugin_escaped_params()
         self._escape_verbatim_colons()
-        self._operation_keyword = self._get_operation_keyword()
 
 
     def _get_escaped_args(self, args):
@@ -37,6 +41,19 @@ class Statement:
 
     def _tokenize(self):
         return list(self._statement.flatten())
+
+
+    def _get_operation_keyword(self):
+        for token in self._statement:
+            if _is_operation_token(token.ttype):
+                token_value = token.value.upper()
+                if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
+                    operation_keyword = token_value
+                    break
+        else:
+            operation_keyword = None
+
+        return operation_keyword
 
 
     def _get_paramstyle(self):
@@ -132,19 +149,6 @@ class Statement:
         for token in self._tokens:
             if _is_string_literal(token.ttype) or _is_identifier(token.ttype):
                 token.value = escape_verbatim_colon(token.value)
-
-
-    def _get_operation_keyword(self):
-        for token in self._statement:
-            if _is_operation_token(token.ttype):
-                token_value = token.value.upper()
-                if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
-                    operation_keyword = token_value
-                    break
-        else:
-            operation_keyword = None
-
-        return operation_keyword
 
 
     def get_operation_keyword(self):
