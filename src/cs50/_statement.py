@@ -37,8 +37,7 @@ class Statement:
             if _is_placeholder(token.ttype):
                 paramstyle, _ = _parse_placeholder(token.value)
                 break
-
-        if paramstyle is None:
+        else:
             paramstyle = self._default_paramstyle()
 
         return paramstyle
