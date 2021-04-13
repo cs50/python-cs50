@@ -6,6 +6,18 @@ import re
 import sqlparse
 
 
+operation_keywords = {
+    "BEGIN",
+    "COMMIT",
+    "DELETE",
+    "INSERT",
+    "ROLLBACK",
+    "SELECT",
+    "START",
+    "UPDATE"
+}
+
+
 class Paramstyle(enum.Enum):
     FORMAT = enum.auto()
     NAMED = enum.auto()

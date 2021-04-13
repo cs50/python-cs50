@@ -8,7 +8,7 @@ import termcolor
 
 from ._session import Session
 from ._statement import Statement
-from ._sql_util import fetch_select_result
+from ._sql_util import fetch_select_result, is_transaction_start, is_transaction_end
 
 _logger = logging.getLogger("cs50")
 
@@ -26,7 +26,7 @@ class SQL:
         """Execute a SQL statement."""
         statement = Statement(self._dialect, sql, *args, **kwargs)
         operation_keyword = statement.get_operation_keyword()
-        if operation_keyword in {"BEGIN", "START"}:
+        if is_transaction_start(operation_keyword):
             self._autocommit = False
 
         if self._autocommit:
@@ -36,11 +36,9 @@ class SQL:
 
         if self._autocommit:
             self._session.execute("COMMIT")
-            self._session.remove()
 
-        if operation_keyword in {"COMMIT", "ROLLBACK"}:
+        if is_transaction_end(operation_keyword):
             self._autocommit = True
-            self._session.remove()
 
         if operation_keyword == "SELECT":
             ret = fetch_select_result(result)
@@ -51,7 +49,11 @@ class SQL:
         else:
             ret = True
 
+        if self._autocommit:
+            self._session.remove()
+
         return ret
+
 
     def _execute(self, statement):
         # Catch SQLAlchemy warnings
@@ -62,6 +64,8 @@ class SQL:
                 result = self._session.execute(statement)
             except sqlalchemy.exc.IntegrityError as exc:
                 _logger.debug(termcolor.colored(str(statement), "yellow"))
+                if self._autocommit:
+                    self._session.execute("ROLLBACK")
                 raise ValueError(exc.orig) from None
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as exc:
                 self._session.remove()

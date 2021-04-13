@@ -10,6 +10,7 @@ from ._statement_util import (
     is_operation_token,
     is_placeholder,
     is_string_literal,
+    operation_keywords,
     Paramstyle,
     parse_placeholder,
 )
@@ -50,7 +51,7 @@ class Statement:
         for token in self._statement:
             if is_operation_token(token.ttype):
                 token_value = token.value.upper()
-                if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
+                if token_value in operation_keywords:
                     operation_keyword = token_value
                     break
         else:
