@@ -6,12 +6,11 @@ import re
 
 import sqlparse
 
-
 from ._sql_sanitizer import SQLSanitizer, escape_verbatim_colon
 
 
 class Statement:
-    """Parses a SQL statement and replaces placeholders with parameters"""
+    """Parses a SQL statement and replaces the placeholders with the corresponding parameters"""
     def __init__(self, dialect, sql, *args, **kwargs):
         if len(args) > 0 and len(kwargs) > 0:
             raise RuntimeError("cannot pass both positional and named parameters")
@@ -19,23 +18,12 @@ class Statement:
         self._sql_sanitizer = SQLSanitizer(dialect)
         self._args = args
         self._kwargs = kwargs
-        self._statement = _parse(sql)
-        self._operation_keyword = self._get_operation_keyword()
+        self._statement = _format_and_parse(sql)
         self._tokens = self._tokenize()
+        self._paramstyle = self._get_paramstyle()
+        self._placeholders = self._get_placeholders()
         self._replace_placeholders_with_params()
-
-
-    def _get_operation_keyword(self):
-        for token in self._statement:
-            if _is_operation_token(token):
-                token_value = token.value.upper()
-                if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
-                    operation_keyword = token_value
-                    break
-        else:
-            operation_keyword = None
-
-        return operation_keyword
+        self._operation_keyword = self._get_operation_keyword()
 
 
     def _tokenize(self):
@@ -43,34 +31,40 @@ class Statement:
 
 
     def _replace_placeholders_with_params(self):
-        paramstyle, placeholders = self._parse_placeholders()
-        if paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
-            self._replace_format_or_qmark_placeholders(placeholders)
-        elif paramstyle == _Paramstyle.NUMERIC:
-            self._replace_numeric_placeholders(placeholders)
-        if paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
-            self._replace_named_or_pyformat_placeholders(placeholders)
+        if self._paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
+            self._replace_format_or_qmark_placeholders()
+        elif self._paramstyle == _Paramstyle.NUMERIC:
+            self._replace_numeric_placeholders()
+        if self._paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
+            self._replace_named_or_pyformat_placeholders()
 
         self._escape_verbatim_colons()
 
 
-    def _parse_placeholders(self):
+    def _get_paramstyle(self):
         paramstyle = None
-        placeholders = collections.OrderedDict()
-        for index, token in enumerate(self._tokens):
+        for token in self._tokens:
             if _is_placeholder(token):
-                _paramstyle, name = _parse_placeholder(token)
-                if paramstyle is None:
-                    paramstyle = _paramstyle
-                elif _paramstyle != paramstyle:
-                    raise RuntimeError("inconsistent paramstyle")
-
-                placeholders[index] = name
+                paramstyle, _ = _parse_placeholder(token)
+                break
 
         if paramstyle is None:
             paramstyle = self._default_paramstyle()
 
-        return paramstyle, placeholders
+        return paramstyle
+
+
+    def _get_placeholders(self):
+        placeholders = collections.OrderedDict()
+        for index, token in enumerate(self._tokens):
+            if _is_placeholder(token):
+                paramstyle, name = _parse_placeholder(token)
+                if paramstyle != self._paramstyle:
+                    raise RuntimeError("inconsistent paramstyle")
+
+                placeholders[index] = name
+
+        return placeholders
 
 
     def _default_paramstyle(self):
@@ -83,22 +77,22 @@ class Statement:
         return paramstyle
 
 
-    def _replace_format_or_qmark_placeholders(self, placeholders):
-        if len(placeholders) != len(self._args):
-            _placeholders = ", ".join([str(token) for token in placeholders.values()])
+    def _replace_format_or_qmark_placeholders(self):
+        if len(self._placeholders) != len(self._args):
+            placeholders = ", ".join([str(token) for token in self._placeholders.values()])
             _args = ", ".join([str(self._sql_sanitizer.escape(arg)) for arg in self._args])
-            if len(placeholders) < len(self._args):
-                raise RuntimeError(f"fewer placeholders ({_placeholders}) than values ({_args})")
+            if len(self._placeholders) < len(self._args):
+                raise RuntimeError(f"fewer placeholders ({placeholders}) than values ({_args})")
 
-            raise RuntimeError(f"more placeholders ({_placeholders}) than values ({_args})")
+            raise RuntimeError(f"more placeholders ({placeholders}) than values ({_args})")
 
-        for arg_index, token_index in enumerate(placeholders.keys()):
+        for arg_index, token_index in enumerate(self._placeholders.keys()):
             self._tokens[token_index] = self._sql_sanitizer.escape(self._args[arg_index])
 
 
-    def _replace_numeric_placeholders(self, placeholders):
+    def _replace_numeric_placeholders(self):
         unused_arg_idxs = set(range(len(self._args)))
-        for token_index, num in placeholders.items():
+        for token_index, num in self._placeholders.items():
             if num >= len(self._args):
                 raise RuntimeError(f"missing value for placeholder ({num + 1})")
 
@@ -112,9 +106,9 @@ class Statement:
                 f"unused value{'' if len(unused_arg_idxs) == 1 else 's'} ({unused_args})")
 
 
-    def _replace_named_or_pyformat_placeholders(self, placeholders):
+    def _replace_named_or_pyformat_placeholders(self):
         unused_params = set(self._kwargs.keys())
-        for token_index, param_name in placeholders.items():
+        for token_index, param_name in self._placeholders.items():
             if param_name not in self._kwargs:
                 raise RuntimeError(f"missing value for placeholder ({param_name})")
 
@@ -133,6 +127,19 @@ class Statement:
                 token.value = escape_verbatim_colon(token.value)
 
 
+    def _get_operation_keyword(self):
+        for token in self._statement:
+            if _is_operation_token(token):
+                token_value = token.value.upper()
+                if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
+                    operation_keyword = token_value
+                    break
+        else:
+            operation_keyword = None
+
+        return operation_keyword
+
+
     def get_operation_keyword(self):
         """Returns the operation keyword of the statement (e.g., SELECT) if found, or None"""
         return self._operation_keyword
@@ -142,7 +149,7 @@ class Statement:
         return "".join([str(token) for token in self._tokens])
 
 
-def _parse(sql):
+def _format_and_parse(sql):
     formatted_statements = sqlparse.format(sql, strip_comments=True).strip()
     parsed_statements = sqlparse.parse(formatted_statements)
     statement_count = len(parsed_statements)
