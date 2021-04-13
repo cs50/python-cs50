@@ -2,6 +2,7 @@
 
 import decimal
 
+
 def fetch_select_result(result):
     rows = [dict(row) for row in result.fetchall()]
     for row in rows:

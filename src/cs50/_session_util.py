@@ -5,6 +5,7 @@ import sqlite3
 
 import sqlalchemy
 
+
 def is_sqlite_url(url):
     return url.startswith("sqlite:///")
 
