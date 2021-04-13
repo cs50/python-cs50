@@ -4,9 +4,9 @@ import sqlalchemy
 import sqlalchemy.orm
 
 from ._session_util import (
-    is_sqlite_url,
     assert_sqlite_file_exists,
     create_session,
+    is_sqlite_url,
 )
 
 
