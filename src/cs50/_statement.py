@@ -1,12 +1,13 @@
 """Parses a SQL statement and replaces placeholders with parameters"""
 
 import collections
-import datetime
 import enum
 import re
 
-import sqlalchemy
 import sqlparse
+
+
+from ._sql_sanitizer import SQLSanitizer, escape_verbatim_colon
 
 
 class Statement:
@@ -15,26 +16,13 @@ class Statement:
         if len(args) > 0 and len(kwargs) > 0:
             raise RuntimeError("cannot pass both positional and named parameters")
 
-        self._dialect = dialect
-        self._sql = sql
+        self._sql_sanitizer = SQLSanitizer(dialect)
         self._args = args
         self._kwargs = kwargs
-
-        self._statement = self._parse()
+        self._statement = _parse(sql)
         self._operation_keyword = self._get_operation_keyword()
-        self._tokens = self._replace_placeholders_with_params()
-
-
-    def _parse(self):
-        formatted_statements = sqlparse.format(self._sql, strip_comments=True).strip()
-        parsed_statements = sqlparse.parse(formatted_statements)
-        statement_count = len(parsed_statements)
-        if statement_count == 0:
-            raise RuntimeError("missing statement")
-        if statement_count > 1:
-            raise RuntimeError("too many statements at once")
-
-        return parsed_statements[0]
+        self._tokens = self._tokenize()
+        self._replace_placeholders_with_params()
 
 
     def _get_operation_keyword(self):
@@ -50,28 +38,26 @@ class Statement:
         return operation_keyword
 
 
-    def _replace_placeholders_with_params(self):
-        tokens = self._tokenize()
-        paramstyle, placeholders = self._parse_placeholders(tokens)
-        if paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
-            tokens = self._replace_format_or_qmark_placeholders(placeholders, tokens)
-        elif paramstyle == _Paramstyle.NUMERIC:
-            tokens = self._replace_numeric_placeholders(placeholders, tokens)
-        if paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
-            tokens = self._replace_named_or_pyformat_placeholders(placeholders, tokens)
-
-        tokens = _escape_verbatim_colons(tokens)
-        return tokens
-
-
     def _tokenize(self):
         return list(self._statement.flatten())
 
 
-    def _parse_placeholders(self, tokens):
+    def _replace_placeholders_with_params(self):
+        paramstyle, placeholders = self._parse_placeholders()
+        if paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
+            self._replace_format_or_qmark_placeholders(placeholders)
+        elif paramstyle == _Paramstyle.NUMERIC:
+            self._replace_numeric_placeholders(placeholders)
+        if paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
+            self._replace_named_or_pyformat_placeholders(placeholders)
+
+        self._escape_verbatim_colons()
+
+
+    def _parse_placeholders(self):
         paramstyle = None
         placeholders = collections.OrderedDict()
-        for index, token in enumerate(tokens):
+        for index, token in enumerate(self._tokens):
             if _is_placeholder(token):
                 _paramstyle, name = _parse_placeholder(token)
                 if paramstyle is None:
@@ -97,46 +83,42 @@ class Statement:
         return paramstyle
 
 
-    def _replace_format_or_qmark_placeholders(self, placeholders, tokens):
+    def _replace_format_or_qmark_placeholders(self, placeholders):
         if len(placeholders) != len(self._args):
             _placeholders = ", ".join([str(token) for token in placeholders.values()])
-            _args = ", ".join([str(self._escape(arg)) for arg in self._args])
+            _args = ", ".join([str(self._sql_sanitizer.escape(arg)) for arg in self._args])
             if len(placeholders) < len(self._args):
                 raise RuntimeError(f"fewer placeholders ({_placeholders}) than values ({_args})")
 
             raise RuntimeError(f"more placeholders ({_placeholders}) than values ({_args})")
 
         for arg_index, token_index in enumerate(placeholders.keys()):
-            tokens[token_index] = self._escape(self._args[arg_index])
-
-        return tokens
+            self._tokens[token_index] = self._sql_sanitizer.escape(self._args[arg_index])
 
 
-    def _replace_numeric_placeholders(self, placeholders, tokens):
-        unused_arg_indices = set(range(len(self._args)))
+    def _replace_numeric_placeholders(self, placeholders):
+        unused_arg_idxs = set(range(len(self._args)))
         for token_index, num in placeholders.items():
             if num >= len(self._args):
                 raise RuntimeError(f"missing value for placeholder ({num + 1})")
 
-            tokens[token_index] = self._escape(self._args[num])
-            unused_arg_indices.remove(num)
+            self._tokens[token_index] = self._sql_sanitizer.escape(self._args[num])
+            unused_arg_idxs.remove(num)
 
-        if len(unused_arg_indices) > 0:
+        if len(unused_arg_idxs) > 0:
             unused_args = ", ".join(
-                [str(self._escape(self._args[i])) for i in sorted(unused_arg_indices)])
+                [str(self._sql_sanitizer.escape(self._args[i])) for i in sorted(unused_arg_idxs)])
             raise RuntimeError(
-                f"unused value{'' if len(unused_arg_indices) == 1 else 's'} ({unused_args})")
-
-        return tokens
+                f"unused value{'' if len(unused_arg_idxs) == 1 else 's'} ({unused_args})")
 
 
-    def _replace_named_or_pyformat_placeholders(self, placeholders, tokens):
+    def _replace_named_or_pyformat_placeholders(self, placeholders):
         unused_params = set(self._kwargs.keys())
         for token_index, param_name in placeholders.items():
             if param_name not in self._kwargs:
                 raise RuntimeError(f"missing value for placeholder ({param_name})")
 
-            tokens[token_index] = self._escape(self._kwargs[param_name])
+            self._tokens[token_index] = self._sql_sanitizer.escape(self._kwargs[param_name])
             unused_params.remove(param_name)
 
         if len(unused_params) > 0:
@@ -144,70 +126,11 @@ class Statement:
             raise RuntimeError(
                 f"unused value{'' if len(unused_params) == 1 else 's'} ({joined_unused_params})")
 
-        return tokens
 
-
-    def _escape(self, value):
-        """
-        Escapes value using engine's conversion function.
-        https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
-        """
-        # pylint: disable=too-many-return-statements
-        if isinstance(value, (list, tuple)):
-            return self._escape_iterable(value)
-
-        if isinstance(value, bool):
-            return sqlparse.sql.Token(
-                sqlparse.tokens.Number,
-                sqlalchemy.types.Boolean().literal_processor(self._dialect)(value))
-
-        if isinstance(value, bytes):
-            if self._dialect.name in {"mysql", "sqlite"}:
-                # https://dev.mysql.com/doc/refman/8.0/en/hexadecimal-literals.html
-                return sqlparse.sql.Token(sqlparse.tokens.Other, f"x'{value.hex()}'")
-            if self._dialect.name in {"postgres", "postgresql"}:
-                # https://dba.stackexchange.com/a/203359
-                return sqlparse.sql.Token(sqlparse.tokens.Other, f"'\\x{value.hex()}'")
-
-            raise RuntimeError(f"unsupported value: {value}")
-
-        string_processor = sqlalchemy.types.String().literal_processor(self._dialect)
-        if isinstance(value, datetime.date):
-            return sqlparse.sql.Token(
-                sqlparse.tokens.String, string_processor(value.strftime("%Y-%m-%d")))
-
-        if isinstance(value, datetime.datetime):
-            return sqlparse.sql.Token(
-                sqlparse.tokens.String, string_processor(value.strftime("%Y-%m-%d %H:%M:%S")))
-
-        if isinstance(value, datetime.time):
-            return sqlparse.sql.Token(
-                sqlparse.tokens.String, string_processor(value.strftime("%H:%M:%S")))
-
-        if isinstance(value, float):
-            return sqlparse.sql.Token(
-                sqlparse.tokens.Number,
-                sqlalchemy.types.Float().literal_processor(self._dialect)(value))
-
-        if isinstance(value, int):
-            return sqlparse.sql.Token(
-                sqlparse.tokens.Number,
-                sqlalchemy.types.Integer().literal_processor(self._dialect)(value))
-
-        if isinstance(value, str):
-            return sqlparse.sql.Token(sqlparse.tokens.String, string_processor(value))
-
-        if value is None:
-            return sqlparse.sql.Token(
-                sqlparse.tokens.Keyword,
-                sqlalchemy.types.NullType().literal_processor(self._dialect)(value))
-
-        raise RuntimeError(f"unsupported value: {value}")
-
-
-    def _escape_iterable(self, iterable):
-        return sqlparse.sql.TokenList(
-            sqlparse.parse(", ".join([str(self._escape(v)) for v in iterable])))
+    def _escape_verbatim_colons(self):
+        for token in self._tokens:
+            if _is_string_literal(token) or _is_identifier(token):
+                token.value = escape_verbatim_colon(token.value)
 
 
     def get_operation_keyword(self):
@@ -217,6 +140,18 @@ class Statement:
 
     def __str__(self):
         return "".join([str(token) for token in self._tokens])
+
+
+def _parse(sql):
+    formatted_statements = sqlparse.format(sql, strip_comments=True).strip()
+    parsed_statements = sqlparse.parse(formatted_statements)
+    statement_count = len(parsed_statements)
+    if statement_count == 0:
+        raise RuntimeError("missing statement")
+    if statement_count > 1:
+        raise RuntimeError("too many statements at once")
+
+    return parsed_statements[0]
 
 
 def _is_placeholder(token):
@@ -246,16 +181,6 @@ def _parse_placeholder(token):
         return _Paramstyle.PYFORMAT, matches.group(1)
 
     raise RuntimeError(f"{token.value}: invalid placeholder")
-
-
-def _escape_verbatim_colons(tokens):
-    for token in tokens:
-        if _is_string_literal(token):
-            token.value = re.sub(r"(^'|\s+):", r"\1\:", token.value)
-        elif _is_identifier(token):
-            token.value = re.sub(r"(^\"|\s+):", r"\1\:", token.value)
-
-    return tokens
 
 
 def _is_operation_token(token):
