@@ -1,4 +1,4 @@
-"""Parses a SQL statement and replaces placeholders with parameters"""
+"""Parses a SQL statement and replaces the placeholders with the corresponding parameters"""
 
 import collections
 import enum
@@ -22,7 +22,7 @@ class Statement:
         self._tokens = self._tokenize()
         self._paramstyle = self._get_paramstyle()
         self._placeholders = self._get_placeholders()
-        self._replace_placeholders_with_params()
+        self._plugin_escaped_params()
         self._operation_keyword = self._get_operation_keyword()
 
 
@@ -30,13 +30,13 @@ class Statement:
         return list(self._statement.flatten())
 
 
-    def _replace_placeholders_with_params(self):
+    def _plugin_escaped_params(self):
         if self._paramstyle in {_Paramstyle.FORMAT, _Paramstyle.QMARK}:
-            self._replace_format_or_qmark_placeholders()
+            self._plugin_format_or_qmark_params()
         elif self._paramstyle == _Paramstyle.NUMERIC:
-            self._replace_numeric_placeholders()
+            self._plugin_numeric_params()
         if self._paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
-            self._replace_named_or_pyformat_placeholders()
+            self._plugin_named_or_pyformat_params()
 
         self._escape_verbatim_colons()
 
@@ -77,7 +77,7 @@ class Statement:
         return paramstyle
 
 
-    def _replace_format_or_qmark_placeholders(self):
+    def _plugin_format_or_qmark_params(self):
         if len(self._placeholders) != len(self._args):
             placeholders = ", ".join([str(token) for token in self._placeholders.values()])
             _args = ", ".join([str(self._sql_sanitizer.escape(arg)) for arg in self._args])
@@ -90,7 +90,7 @@ class Statement:
             self._tokens[token_index] = self._sql_sanitizer.escape(self._args[arg_index])
 
 
-    def _replace_numeric_placeholders(self):
+    def _plugin_numeric_params(self):
         unused_arg_idxs = set(range(len(self._args)))
         for token_index, num in self._placeholders.items():
             if num >= len(self._args):
@@ -106,7 +106,7 @@ class Statement:
                 f"unused value{'' if len(unused_arg_idxs) == 1 else 's'} ({unused_args})")
 
 
-    def _replace_named_or_pyformat_placeholders(self):
+    def _plugin_named_or_pyformat_params(self):
         unused_params = set(self._kwargs.keys())
         for token_index, param_name in self._placeholders.items():
             if param_name not in self._kwargs:
