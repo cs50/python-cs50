@@ -44,8 +44,8 @@ class Statement:
     def _get_paramstyle(self):
         paramstyle = None
         for token in self._tokens:
-            if _is_placeholder(token):
-                paramstyle, _ = _parse_placeholder(token)
+            if _is_placeholder(token.ttype):
+                paramstyle, _ = _parse_placeholder(token.value)
                 break
 
         if paramstyle is None:
@@ -57,8 +57,8 @@ class Statement:
     def _get_placeholders(self):
         placeholders = collections.OrderedDict()
         for index, token in enumerate(self._tokens):
-            if _is_placeholder(token):
-                paramstyle, name = _parse_placeholder(token)
+            if _is_placeholder(token.ttype):
+                paramstyle, name = _parse_placeholder(token.value)
                 if paramstyle != self._paramstyle:
                     raise RuntimeError("inconsistent paramstyle")
 
@@ -123,13 +123,13 @@ class Statement:
 
     def _escape_verbatim_colons(self):
         for token in self._tokens:
-            if _is_string_literal(token) or _is_identifier(token):
+            if _is_string_literal(token.ttype) or _is_identifier(token.ttype):
                 token.value = escape_verbatim_colon(token.value)
 
 
     def _get_operation_keyword(self):
         for token in self._statement:
-            if _is_operation_token(token):
+            if _is_operation_token(token.ttype):
                 token_value = token.value.upper()
                 if token_value in {"BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}:
                     operation_keyword = token_value
@@ -161,46 +161,46 @@ def _format_and_parse(sql):
     return parsed_statements[0]
 
 
-def _is_placeholder(token):
-    return token.ttype == sqlparse.tokens.Name.Placeholder
+def _is_placeholder(ttype):
+    return ttype == sqlparse.tokens.Name.Placeholder
 
 
-def _parse_placeholder(token):
-    if token.value == "?":
+def _parse_placeholder(value):
+    if value == "?":
         return _Paramstyle.QMARK, None
 
     # E.g., :1
-    matches = re.search(r"^:([1-9]\d*)$", token.value)
+    matches = re.search(r"^:([1-9]\d*)$", value)
     if matches:
         return _Paramstyle.NUMERIC, int(matches.group(1)) - 1
 
     # E.g., :foo
-    matches = re.search(r"^:([a-zA-Z]\w*)$", token.value)
+    matches = re.search(r"^:([a-zA-Z]\w*)$", value)
     if matches:
         return _Paramstyle.NAMED, matches.group(1)
 
-    if token.value == "%s":
+    if value == "%s":
         return _Paramstyle.FORMAT, None
 
     # E.g., %(foo)s
-    matches = re.search(r"%\((\w+)\)s$", token.value)
+    matches = re.search(r"%\((\w+)\)s$", value)
     if matches:
         return _Paramstyle.PYFORMAT, matches.group(1)
 
-    raise RuntimeError(f"{token.value}: invalid placeholder")
+    raise RuntimeError(f"{value}: invalid placeholder")
 
 
-def _is_operation_token(token):
-    return token.ttype in {
+def _is_operation_token(ttype):
+    return ttype in {
         sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML}
 
 
-def _is_string_literal(token):
-    return token.ttype in [sqlparse.tokens.Literal.String, sqlparse.tokens.Literal.String.Single]
+def _is_string_literal(ttype):
+    return ttype in [sqlparse.tokens.Literal.String, sqlparse.tokens.Literal.String.Single]
 
 
-def _is_identifier(token):
-    return token.ttype == sqlparse.tokens.Literal.String.Symbol
+def _is_identifier(ttype):
+    return ttype == sqlparse.tokens.Literal.String.Symbol
 
 
 class _Paramstyle(enum.Enum):
