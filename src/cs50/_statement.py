@@ -23,6 +23,7 @@ class Statement:
         self._paramstyle = self._get_paramstyle()
         self._placeholders = self._get_placeholders()
         self._plugin_escaped_params()
+        self._escape_verbatim_colons()
         self._operation_keyword = self._get_operation_keyword()
 
 
@@ -37,8 +38,6 @@ class Statement:
             self._plugin_numeric_params()
         if self._paramstyle in {_Paramstyle.NAMED, _Paramstyle.PYFORMAT}:
             self._plugin_named_or_pyformat_params()
-
-        self._escape_verbatim_colons()
 
 
     def _get_paramstyle(self):
