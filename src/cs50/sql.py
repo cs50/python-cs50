@@ -15,12 +15,12 @@ _logger = logging.getLogger("cs50")
 
 class SQL:
     """Wraps SQLAlchemy"""
+
     def __init__(self, url, **engine_kwargs):
         self._session = Session(url, **engine_kwargs)
         self._dialect = self._session.get_bind().dialect
         self._is_postgres = self._dialect.name in {"postgres", "postgresql"}
         self._autocommit = False
-
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
@@ -53,7 +53,6 @@ class SQL:
 
         return ret
 
-
     def _execute(self, statement):
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
@@ -72,19 +71,16 @@ class SQL:
             _logger.debug(termcolor.colored(str(statement), "green"))
             return result
 
-
     def _last_row_id_or_none(self, result):
         if self._is_postgres:
             return self._get_last_val()
         return result.lastrowid if result.rowcount == 1 else None
-
 
     def _get_last_val(self):
         try:
             return self._session.execute("SELECT LASTVAL()").first()[0]
         except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
             return None
-
 
     def init_app(self, app):
         """Registers a teardown_appcontext listener to remove session and enables logging"""

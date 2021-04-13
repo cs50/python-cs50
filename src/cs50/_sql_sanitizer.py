@@ -13,7 +13,6 @@ class SQLSanitizer:
     def __init__(self, dialect):
         self._dialect = dialect
 
-
     def escape(self, value):
         """
         Escapes value using engine's conversion function.
@@ -70,7 +69,6 @@ class SQLSanitizer:
                 sqlalchemy.types.NullType().literal_processor(self._dialect)(value))
 
         raise RuntimeError(f"unsupported value: {value}")
-
 
     def escape_iterable(self, iterable):
         """Escapes a collection of values (e.g., list, tuple)"""

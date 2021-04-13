@@ -36,7 +36,7 @@ def get_int(prompt):
     """
     while True:
         try:
-            return  _get_int(prompt)
+            return _get_int(prompt)
         except (MemoryError, ValueError):
             pass
 
@@ -89,9 +89,11 @@ class _flushfile():
         self.stream.write(data)
         self.stream.flush()
 
+
 def disable_output_buffering():
     """Disables output buffering to prevent prompts from being buffered"""
     sys.stderr = _flushfile(sys.stderr)
     sys.stdout = _flushfile(sys.stdout)
+
 
 disable_output_buffering()
