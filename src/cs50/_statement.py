@@ -16,8 +16,8 @@ class Statement:
             raise RuntimeError("cannot pass both positional and named parameters")
 
         self._sql_sanitizer = SQLSanitizer(dialect)
-        self._args = args
-        self._kwargs = kwargs
+        self._args = self._get_escaped_args(args)
+        self._kwargs = self._get_escaped_kwargs(kwargs)
         self._statement = _format_and_parse(sql)
         self._tokens = self._tokenize()
         self._paramstyle = self._get_paramstyle()
@@ -25,6 +25,14 @@ class Statement:
         self._plugin_escaped_params()
         self._escape_verbatim_colons()
         self._operation_keyword = self._get_operation_keyword()
+
+
+    def _get_escaped_args(self, args):
+        return [self._sql_sanitizer.escape(arg) for arg in args]
+
+
+    def _get_escaped_kwargs(self, kwargs):
+        return {k: self._sql_sanitizer.escape(v) for k, v in kwargs.items()}
 
 
     def _tokenize(self):
@@ -76,32 +84,33 @@ class Statement:
 
 
     def _plugin_format_or_qmark_params(self):
-        if len(self._placeholders) != len(self._args):
-            placeholders = ", ".join([str(token) for token in self._placeholders.values()])
-            _args = ", ".join([str(self._sql_sanitizer.escape(arg)) for arg in self._args])
-            if len(self._placeholders) < len(self._args):
-                raise RuntimeError(f"fewer placeholders ({placeholders}) than values ({_args})")
-
-            raise RuntimeError(f"more placeholders ({placeholders}) than values ({_args})")
-
+        self._assert_valid_arg_count()
         for arg_index, token_index in enumerate(self._placeholders.keys()):
-            self._tokens[token_index] = self._sql_sanitizer.escape(self._args[arg_index])
+            self._tokens[token_index] = self._args[arg_index]
+
+
+    def _assert_valid_arg_count(self):
+        if len(self._placeholders) != len(self._args):
+            placeholders = _get_human_readable_list(self._placeholders.values())
+            args = _get_human_readable_list(self._args)
+            if len(self._placeholders) < len(self._args):
+                raise RuntimeError(f"fewer placeholders ({placeholders}) than values ({args})")
+
+            raise RuntimeError(f"more placeholders ({placeholders}) than values ({args})")
 
 
     def _plugin_numeric_params(self):
-        unused_arg_idxs = set(range(len(self._args)))
+        unused_arg_indices = set(range(len(self._args)))
         for token_index, num in self._placeholders.items():
             if num >= len(self._args):
                 raise RuntimeError(f"missing value for placeholder ({num + 1})")
 
-            self._tokens[token_index] = self._sql_sanitizer.escape(self._args[num])
-            unused_arg_idxs.remove(num)
+            self._tokens[token_index] = self._args[num]
+            unused_arg_indices.remove(num)
 
-        if len(unused_arg_idxs) > 0:
-            unused_args = ", ".join(
-                [str(self._sql_sanitizer.escape(self._args[i])) for i in sorted(unused_arg_idxs)])
-            raise RuntimeError(
-                f"unused value{'' if len(unused_arg_idxs) == 1 else 's'} ({unused_args})")
+        if len(unused_arg_indices) > 0:
+            unused_args = _get_human_readable_list([self._args[i] for i in sorted(unused_arg_indices)])
+            raise RuntimeError(f"unused value{'' if len(unused_args) == 1 else 's'} ({unused_args})")
 
 
     def _plugin_named_or_pyformat_params(self):
@@ -110,11 +119,11 @@ class Statement:
             if param_name not in self._kwargs:
                 raise RuntimeError(f"missing value for placeholder ({param_name})")
 
-            self._tokens[token_index] = self._sql_sanitizer.escape(self._kwargs[param_name])
+            self._tokens[token_index] = self._kwargs[param_name]
             unused_params.remove(param_name)
 
         if len(unused_params) > 0:
-            joined_unused_params = ", ".join(sorted(unused_params))
+            joined_unused_params = _get_human_readable_list(sorted(unused_params))
             raise RuntimeError(
                 f"unused value{'' if len(unused_params) == 1 else 's'} ({joined_unused_params})")
 
@@ -145,6 +154,9 @@ class Statement:
 
     def __str__(self):
         return "".join([str(token) for token in self._tokens])
+
+
+
 
 
 def _format_and_parse(sql):
@@ -199,6 +211,10 @@ def _is_string_literal(ttype):
 
 def _is_identifier(ttype):
     return ttype == sqlparse.tokens.Literal.String.Symbol
+
+
+def _get_human_readable_list(iterable):
+    return ", ".join(str(v) for v in iterable)
 
 
 class _Paramstyle(enum.Enum):
