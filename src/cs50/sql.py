@@ -1,6 +1,5 @@
 """Wraps SQLAlchemy"""
 
-import decimal
 import logging
 import warnings
 
@@ -9,6 +8,7 @@ import termcolor
 
 from ._session import Session
 from ._statement import Statement
+from ._sql_util import fetch_select_result
 
 _logger = logging.getLogger("cs50")
 
@@ -43,7 +43,7 @@ class SQL:
             self._session.remove()
 
         if operation_keyword == "SELECT":
-            ret = _fetch_select_result(result)
+            ret = fetch_select_result(result)
         elif operation_keyword == "INSERT":
             ret = self._last_row_id_or_none(result)
         elif operation_keyword in {"DELETE", "UPDATE"}:
@@ -89,19 +89,3 @@ class SQL:
             self._session.remove()
 
         logging.getLogger("cs50").disabled = False
-
-
-def _fetch_select_result(result):
-    rows = [dict(row) for row in result.fetchall()]
-    for row in rows:
-        for column in row:
-            # Coerce decimal.Decimal objects to float objects
-            # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
-            if isinstance(row[column], decimal.Decimal):
-                row[column] = float(row[column])
-
-            # Coerce memoryview objects (as from PostgreSQL's bytea columns) to bytes
-            elif isinstance(row[column], memoryview):
-                row[column] = bytes(row[column])
-
-    return rows
