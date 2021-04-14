@@ -64,7 +64,7 @@ class SQL:
             except sqlalchemy.exc.IntegrityError as exc:
                 _logger.debug(termcolor.colored(str(statement), "yellow"))
                 if self._autocommit:
-                    self._session.execute("ROLLBACK")
+                    self._session.remove()
                 raise ValueError(exc.orig) from None
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as exc:
                 self._session.remove()
