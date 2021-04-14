@@ -20,24 +20,31 @@ class SQL:
         dialect = self._session.get_bind().dialect
         self._is_postgres = dialect.name in {"postgres", "postgresql"}
         self._sanitize_statement = statement_factory(dialect)
-        self._autocommit = False
+        self._outside_transaction = True
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
         statement = self._sanitize_statement(sql, *args, **kwargs)
+        try:
+            with raise_errors_for_warnings():
+                result = self._session.execute(statement)
+        except sqlalchemy.exc.IntegrityError as exc:
+            _logger.debug(termcolor.colored(str(statement), "yellow"))
+            if self._outside_transaction:
+                self._session.remove()
+            raise ValueError(exc.orig) from None
+        except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as exc:
+            self._session.remove()
+            _logger.debug(termcolor.colored(statement, "red"))
+            raise RuntimeError(exc.orig) from None
+
         if statement.is_transaction_start():
-            self._autocommit = False
+            self._outside_transaction = False
 
-        if self._autocommit:
-            self._session.execute("BEGIN")
-
-        result = self._execute(statement)
-
-        if self._autocommit:
-            self._session.execute("COMMIT")
+        _logger.debug(termcolor.colored(str(statement), "green"))
 
         if statement.is_transaction_end():
-            self._autocommit = True
+            self._outside_transaction = True
 
         if statement.is_select():
             ret = fetch_select_result(result)
@@ -48,27 +55,10 @@ class SQL:
         else:
             ret = True
 
-        if self._autocommit:
+        if self._outside_transaction:
             self._session.remove()
 
         return ret
-
-    def _execute(self, statement):
-        with raise_errors_for_warnings():
-            try:
-                result = self._session.execute(statement)
-            except sqlalchemy.exc.IntegrityError as exc:
-                _logger.debug(termcolor.colored(str(statement), "yellow"))
-                if self._autocommit:
-                    self._session.remove()
-                raise ValueError(exc.orig) from None
-            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as exc:
-                self._session.remove()
-                _logger.debug(termcolor.colored(statement, "red"))
-                raise RuntimeError(exc.orig) from None
-
-            _logger.debug(termcolor.colored(str(statement), "green"))
-            return result
 
     def _last_row_id_or_none(self, result):
         if self._is_postgres:
