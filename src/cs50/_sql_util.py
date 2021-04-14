@@ -1,6 +1,8 @@
 """Utility functions used by sql.py"""
 
+import contextlib
 import decimal
+import warnings
 
 
 def fetch_select_result(result):
@@ -17,3 +19,10 @@ def fetch_select_result(result):
                 row[column] = bytes(row[column])
 
     return rows
+
+
+@contextlib.contextmanager
+def raise_errors_for_warnings():
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        yield

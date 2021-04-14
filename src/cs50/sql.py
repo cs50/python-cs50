@@ -1,14 +1,13 @@
 """Wraps SQLAlchemy"""
 
 import logging
-import warnings
 
 import sqlalchemy
 import termcolor
 
 from ._session import Session
 from ._statement import statement_factory
-from ._sql_util import fetch_select_result
+from ._sql_util import fetch_select_result, raise_errors_for_warnings
 
 _logger = logging.getLogger("cs50")
 
@@ -55,10 +54,7 @@ class SQL:
         return ret
 
     def _execute(self, statement):
-        # Catch SQLAlchemy warnings
-        with warnings.catch_warnings():
-            # Raise exceptions for warnings
-            warnings.simplefilter("error")
+        with raise_errors_for_warnings():
             try:
                 result = self._session.execute(statement)
             except sqlalchemy.exc.IntegrityError as exc:
