@@ -147,9 +147,23 @@ class Statement:
             if is_string_literal(token.ttype) or is_identifier(token.ttype):
                 token.value = escape_verbatim_colon(token.value)
 
-    def get_operation_keyword(self):
-        """Returns the operation keyword of the statement (e.g., SELECT) if found, or None"""
-        return self._operation_keyword
+    def is_transaction_start(self):
+        return self._operation_keyword in {"BEGIN", "START"}
+
+    def is_transaction_end(self):
+        return self._operation_keyword in {"COMMIT", "ROLLBACK"}
+
+    def is_delete(self):
+        return self._operation_keyword == "DELETE"
+
+    def is_insert(self):
+        return self._operation_keyword == "INSERT"
+
+    def is_select(self):
+        return self._operation_keyword == "SELECT"
+
+    def is_update(self):
+        return self._operation_keyword == "UPDATE"
 
     def __str__(self):
         return "".join([str(token) for token in self._tokens])

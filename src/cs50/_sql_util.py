@@ -3,14 +3,6 @@
 import decimal
 
 
-def is_transaction_start(keyword):
-    return keyword in {"BEGIN", "START"}
-
-
-def is_transaction_end(keyword):
-    return keyword in {"COMMIT", "ROLLBACK"}
-
-
 def fetch_select_result(result):
     rows = [dict(row) for row in result.fetchall()]
     for row in rows:

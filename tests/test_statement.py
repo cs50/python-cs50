@@ -9,24 +9,24 @@ class TestStatement(unittest.TestCase):
     # TODO assert correct exception messages
     def test_mutex_args_and_kwargs(self):
         with self.assertRaises(RuntimeError):
-            Statement("", "", "test", foo="foo")
+            Statement(None, None, "test", foo="foo")
 
         with self.assertRaises(RuntimeError):
-            Statement("", "", "test", 1, 2, foo="foo", bar="bar")
+            Statement(None, None, "test", 1, 2, foo="foo", bar="bar")
 
     @patch.object(SQLSanitizer, "escape", return_value="test")
     @patch.object(Statement, "_escape_verbatim_colons")
     def test_valid_qmark_count(self, *_):
-        Statement("", "SELECT * FROM test WHERE id = ?", 1)
-        Statement("", "SELECT * FROM test WHERE id = ? and val = ?", 1, 'test')
-        Statement("", "INSERT INTO test (id, val, is_valid) VALUES (?, ?, ?)", 1, 'test', True)
+        Statement(None, "SELECT * FROM test WHERE id = ?", 1)
+        Statement(None, "SELECT * FROM test WHERE id = ? and val = ?", 1, 'test')
+        Statement(None, "INSERT INTO test (id, val, is_valid) VALUES (?, ?, ?)", 1, 'test', True)
 
     @patch.object(SQLSanitizer, "escape", return_value="test")
     @patch.object(Statement, "_escape_verbatim_colons")
     def test_invalid_qmark_count(self, *_):
         def assert_invalid_count(sql, *args):
             with self.assertRaises(RuntimeError, msg=f"{sql} {str(args)}"):
-                Statement("", sql, *args)
+                Statement(None, sql, *args)
 
         statements = [
             ("SELECT * FROM test WHERE id = ?", ()),
@@ -43,16 +43,16 @@ class TestStatement(unittest.TestCase):
     @patch.object(SQLSanitizer, "escape", return_value="test")
     @patch.object(Statement, "_escape_verbatim_colons")
     def test_valid_format_count(self, *_):
-        Statement("", "SELECT * FROM test WHERE id = %s", 1)
-        Statement("", "SELECT * FROM test WHERE id = %s and val = %s", 1, 'test')
-        Statement("", "INSERT INTO test (id, val, is_valid) VALUES (%s, %s, %s)", 1, 'test', True)
+        Statement(None, "SELECT * FROM test WHERE id = %s", 1)
+        Statement(None, "SELECT * FROM test WHERE id = %s and val = %s", 1, 'test')
+        Statement(None, "INSERT INTO test (id, val, is_valid) VALUES (%s, %s, %s)", 1, 'test', True)
 
     @patch.object(SQLSanitizer, "escape", return_value="test")
     @patch.object(Statement, "_escape_verbatim_colons")
     def test_invalid_format_count(self, *_):
         def assert_invalid_count(sql, *args):
             with self.assertRaises(RuntimeError, msg=f"{sql} {str(args)}"):
-                Statement("", sql, *args)
+                Statement(None, sql, *args)
 
         statements = [
             ("SELECT * FROM test WHERE id = %s", ()),
@@ -70,7 +70,7 @@ class TestStatement(unittest.TestCase):
     def test_missing_numeric(self, *_):
         def assert_missing_numeric(sql, *args):
             with self.assertRaises(RuntimeError, msg=f"{sql} {str(args)}"):
-                Statement("", sql, *args)
+                Statement(None, sql, *args)
 
         statements = [
             ("SELECT * FROM test WHERE id = :1", ()),
@@ -89,7 +89,7 @@ class TestStatement(unittest.TestCase):
     def test_unused_numeric(self, *_):
         def assert_unused_numeric(sql, *args):
             with self.assertRaises(RuntimeError, msg=f"{sql} {str(args)}"):
-                Statement("", sql, *args)
+                Statement(None, sql, *args)
 
         statements = [
             ("SELECT * FROM test WHERE id = :1", (1, "test")),
@@ -105,7 +105,7 @@ class TestStatement(unittest.TestCase):
     def test_missing_named(self, *_):
         def assert_missing_named(sql, **kwargs):
             with self.assertRaises(RuntimeError, msg=f"{sql} {str(kwargs)}"):
-                Statement("", sql, **kwargs)
+                Statement(None, sql, **kwargs)
 
         statements = [
             ("SELECT * FROM test WHERE id = :id", {}),
@@ -124,7 +124,7 @@ class TestStatement(unittest.TestCase):
     def test_unused_named(self, *_):
         def assert_unused_named(sql, **kwargs):
             with self.assertRaises(RuntimeError, msg=f"{sql} {str(kwargs)}"):
-                Statement("", sql, **kwargs)
+                Statement(None, sql, **kwargs)
 
         statements = [
             ("SELECT * FROM test WHERE id = :id", {"id": 1, "val": "test"}),
@@ -140,7 +140,7 @@ class TestStatement(unittest.TestCase):
     def test_missing_pyformat(self, *_):
         def assert_missing_pyformat(sql, **kwargs):
             with self.assertRaises(RuntimeError, msg=f"{sql} {str(kwargs)}"):
-                Statement("", sql, **kwargs)
+                Statement(None, sql, **kwargs)
 
         statements = [
             ("SELECT * FROM test WHERE id = %(id)s", {}),
@@ -159,7 +159,7 @@ class TestStatement(unittest.TestCase):
     def test_unused_pyformat(self, *_):
         def assert_unused_pyformat(sql, **kwargs):
             with self.assertRaises(RuntimeError, msg=f"{sql} {str(kwargs)}"):
-                Statement("", sql, **kwargs)
+                Statement(None, sql, **kwargs)
 
         statements = [
             ("SELECT * FROM test WHERE id = %(id)s", {"id": 1, "val": "test"}),
@@ -173,7 +173,7 @@ class TestStatement(unittest.TestCase):
     def test_multiple_statements(self):
         def assert_raises_runtimeerror(sql):
             with self.assertRaises(RuntimeError):
-                Statement("", sql)
+                Statement(None, sql)
 
         statements = [
             "SELECT 1; SELECT 2;",
@@ -189,25 +189,42 @@ class TestStatement(unittest.TestCase):
         for sql in statements:
             assert_raises_runtimeerror(sql)
 
-    def test_get_operation_keyword(self):
-        def test_raw_and_lowercase(sql, keyword):
-            statement = Statement("", sql)
-            self.assertEqual(statement.get_operation_keyword(), keyword)
+    def test_is_delete(self):
+        self.assertTrue(Statement(None, "DELETE FROM test").is_delete())
+        self.assertTrue(Statement(None, "delete FROM test").is_delete())
+        self.assertFalse(Statement(None, "SELECT * FROM test").is_delete())
+        self.assertFalse(Statement(None, "INSERT INTO test (id, val) VALUES (1, 'test')").is_delete())
 
-            statement = Statement("", sql.lower())
-            self.assertEqual(statement.get_operation_keyword(), keyword)
+    def test_is_insert(self):
+        self.assertTrue(Statement(None, "INSERT INTO test (id, val) VALUES (1, 'test')").is_insert())
+        self.assertTrue(Statement(None, "insert INTO test (id, val) VALUES (1, 'test')").is_insert())
+        self.assertFalse(Statement(None, "SELECT * FROM test").is_insert())
+        self.assertFalse(Statement(None, "DELETE FROM test").is_insert())
 
+    def test_is_select(self):
+        self.assertTrue(Statement(None, "SELECT * FROM test").is_select())
+        self.assertTrue(Statement(None, "select * FROM test").is_select())
+        self.assertFalse(Statement(None, "DELETE FROM test").is_select())
+        self.assertFalse(Statement(None, "INSERT INTO test (id, val) VALUES (1, 'test')").is_select())
 
-        statements = [
-            ("SELECT * FROM test", "SELECT"),
-            ("INSERT INTO test (id, val) VALUES (1, 'test')", "INSERT"),
-            ("DELETE FROM test", "DELETE"),
-            ("UPDATE test SET id = 2", "UPDATE"),
-            ("START TRANSACTION", "START"),
-            ("BEGIN", "BEGIN"),
-            ("COMMIT", "COMMIT"),
-            ("ROLLBACK", "ROLLBACK"),
-        ]
+    def test_is_update(self):
+        self.assertTrue(Statement(None, "UPDATE test SET id = 2").is_update())
+        self.assertTrue(Statement(None, "update test SET id = 2").is_update())
+        self.assertFalse(Statement(None, "SELECT * FROM test").is_update())
+        self.assertFalse(Statement(None, "INSERT INTO test (id, val) VALUES (1, 'test')").is_update())
 
-        for sql, keyword in statements:
-            test_raw_and_lowercase(sql, keyword)
+    def test_is_transaction_start(self):
+        self.assertTrue(Statement(None, "START TRANSACTION").is_transaction_start())
+        self.assertTrue(Statement(None, "start TRANSACTION").is_transaction_start())
+        self.assertTrue(Statement(None, "BEGIN").is_transaction_start())
+        self.assertTrue(Statement(None, "begin").is_transaction_start())
+        self.assertFalse(Statement(None, "SELECT * FROM test").is_transaction_start())
+        self.assertFalse(Statement(None, "DELETE FROM test").is_transaction_start())
+
+    def test_is_transaction_end(self):
+        self.assertTrue(Statement(None, "COMMIT").is_transaction_end())
+        self.assertTrue(Statement(None, "commit").is_transaction_end())
+        self.assertTrue(Statement(None, "ROLLBACK").is_transaction_end())
+        self.assertTrue(Statement(None, "rollback").is_transaction_end())
+        self.assertFalse(Statement(None, "SELECT * FROM test").is_transaction_end())
+        self.assertFalse(Statement(None, "DELETE FROM test").is_transaction_end())

@@ -8,7 +8,7 @@ import termcolor
 
 from ._session import Session
 from ._statement import Statement
-from ._sql_util import fetch_select_result, is_transaction_start, is_transaction_end
+from ._sql_util import fetch_select_result
 
 _logger = logging.getLogger("cs50")
 
@@ -25,8 +25,7 @@ class SQL:
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
         statement = Statement(self._dialect, sql, *args, **kwargs)
-        operation_keyword = statement.get_operation_keyword()
-        if is_transaction_start(operation_keyword):
+        if statement.is_transaction_start():
             self._autocommit = False
 
         if self._autocommit:
@@ -37,14 +36,14 @@ class SQL:
         if self._autocommit:
             self._session.execute("COMMIT")
 
-        if is_transaction_end(operation_keyword):
+        if statement.is_transaction_end():
             self._autocommit = True
 
-        if operation_keyword == "SELECT":
+        if statement.is_select():
             ret = fetch_select_result(result)
-        elif operation_keyword == "INSERT":
+        elif statement.is_insert():
             ret = self._last_row_id_or_none(result)
-        elif operation_keyword in {"DELETE", "UPDATE"}:
+        elif statement.is_delete() or statement.is_update():
             ret = result.rowcount
         else:
             ret = True
