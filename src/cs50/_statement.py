@@ -16,14 +16,23 @@ from ._statement_util import (
 )
 
 
+def statement_factory(dialect):
+    sql_sanitizer = SQLSanitizer(dialect)
+
+    def statement(sql, *args, **kwargs):
+        return Statement(sql_sanitizer, sql, *args, **kwargs)
+
+    return statement
+
+
 class Statement:
     """Parses a SQL statement and replaces the placeholders with the corresponding parameters"""
 
-    def __init__(self, dialect, sql, *args, **kwargs):
+    def __init__(self, sql_sanitizer, sql, *args, **kwargs):
         if len(args) > 0 and len(kwargs) > 0:
             raise RuntimeError("cannot pass both positional and named parameters")
 
-        self._sql_sanitizer = SQLSanitizer(dialect)
+        self._sql_sanitizer = sql_sanitizer
 
         self._args = self._get_escaped_args(args)
         self._kwargs = self._get_escaped_kwargs(kwargs)

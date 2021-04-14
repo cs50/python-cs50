@@ -7,7 +7,7 @@ import sqlalchemy
 import termcolor
 
 from ._session import Session
-from ._statement import Statement
+from ._statement import statement_factory
 from ._sql_util import fetch_select_result
 
 _logger = logging.getLogger("cs50")
@@ -18,13 +18,14 @@ class SQL:
 
     def __init__(self, url, **engine_kwargs):
         self._session = Session(url, **engine_kwargs)
-        self._dialect = self._session.get_bind().dialect
-        self._is_postgres = self._dialect.name in {"postgres", "postgresql"}
+        dialect = self._session.get_bind().dialect
+        self._is_postgres = dialect.name in {"postgres", "postgresql"}
+        self._sanitized_statement = statement_factory(dialect)
         self._autocommit = False
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
-        statement = Statement(self._dialect, sql, *args, **kwargs)
+        statement = self._sanitized_statement(sql, *args, **kwargs)
         if statement.is_transaction_start():
             self._autocommit = False
 
@@ -52,7 +53,6 @@ class SQL:
             self._session.remove()
 
         return ret
-
 
     def _execute(self, statement):
         # Catch SQLAlchemy warnings

@@ -14,13 +14,11 @@ class TestCS50(unittest.TestCase):
         self.assertEqual(get_string("Answer: "), "")
         mock_get_input.assert_called_with("Answer: ")
 
-
     @patch("cs50.cs50._get_input", return_value="test")
     def test_get_string_nonempty_input(self, mock_get_input):
         """Returns the provided non-empty input"""
         self.assertEqual(get_string("Answer: "), "test")
         mock_get_input.assert_called_with("Answer: ")
-
 
     @patch("cs50.cs50._get_input", side_effect=EOFError)
     def test_get_string_eof(self, mock_get_input):
@@ -28,19 +26,16 @@ class TestCS50(unittest.TestCase):
         self.assertIs(get_string("Answer: "), None)
         mock_get_input.assert_called_with("Answer: ")
 
-
     def test_get_string_invalid_prompt(self):
         """Raises TypeError when prompt is not str"""
         with self.assertRaises(TypeError):
             get_string(1)
-
 
     @patch("cs50.cs50.get_string", return_value=None)
     def test_get_int_eof(self, mock_get_string):
         """Returns None on EOF"""
         self.assertIs(_get_int("Answer: "), None)
         mock_get_string.assert_called_with("Answer: ")
-
 
     def test_get_int_valid_input(self):
         """Returns the provided integer input"""
@@ -61,7 +56,6 @@ class TestCS50(unittest.TestCase):
 
         for return_value, expected_value in values:
             assert_equal(return_value, expected_value)
-
 
     def test_get_int_invalid_input(self):
         """Raises ValueError when input is invalid base-10 int"""
@@ -90,13 +84,11 @@ class TestCS50(unittest.TestCase):
         for return_value in return_values:
             assert_raises_valueerror(return_value)
 
-
     @patch("cs50.cs50.get_string", return_value=None)
     def test_get_float_eof(self, mock_get_string):
         """Returns None on EOF"""
         self.assertIs(_get_float("Answer: "), None)
         mock_get_string.assert_called_with("Answer: ")
-
 
     def test_get_float_valid_input(self):
         """Returns the provided integer input"""
@@ -120,7 +112,6 @@ class TestCS50(unittest.TestCase):
 
         for return_value, expected_value in values:
             assert_equal(return_value, expected_value)
-
 
     def test_get_float_invalid_input(self):
         """Raises ValueError when input is invalid float"""
