@@ -44,7 +44,7 @@ class Statement:
 
         self._paramstyle = self._get_paramstyle()
         self._placeholders = self._get_placeholders()
-        self._plugin_escaped_params()
+        self._substitute_markers_with_escaped_params()
         self._escape_verbatim_colons()
 
     def _get_escaped_args(self, args):
@@ -100,15 +100,15 @@ class Statement:
 
         return placeholders
 
-    def _plugin_escaped_params(self):
+    def _substitute_markers_with_escaped_params(self):
         if self._paramstyle in {Paramstyle.FORMAT, Paramstyle.QMARK}:
-            self._plugin_format_or_qmark_params()
+            self._substitute_format_or_qmark_markers()
         elif self._paramstyle == Paramstyle.NUMERIC:
-            self._plugin_numeric_params()
+            self._substitue_numeric_markers()
         if self._paramstyle in {Paramstyle.NAMED, Paramstyle.PYFORMAT}:
-            self._plugin_named_or_pyformat_params()
+            self._substitute_named_or_pyformat_markers()
 
-    def _plugin_format_or_qmark_params(self):
+    def _substitute_format_or_qmark_markers(self):
         self._assert_valid_arg_count()
         for arg_index, token_index in enumerate(self._placeholders.keys()):
             self._tokens[token_index] = self._args[arg_index]
@@ -122,7 +122,7 @@ class Statement:
 
             raise RuntimeError(f"more placeholders ({placeholders}) than values ({args})")
 
-    def _plugin_numeric_params(self):
+    def _substitue_numeric_markers(self):
         unused_arg_indices = set(range(len(self._args)))
         for token_index, num in self._placeholders.items():
             if num >= len(self._args):
@@ -137,7 +137,7 @@ class Statement:
             raise RuntimeError(
                 f"unused value{'' if len(unused_args) == 1 else 's'} ({unused_args})")
 
-    def _plugin_named_or_pyformat_params(self):
+    def _substitute_named_or_pyformat_markers(self):
         unused_params = set(self._kwargs.keys())
         for token_index, param_name in self._placeholders.items():
             if param_name not in self._kwargs:
