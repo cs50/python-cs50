@@ -20,12 +20,12 @@ class SQL:
         self._session = Session(url, **engine_kwargs)
         dialect = self._session.get_bind().dialect
         self._is_postgres = dialect.name in {"postgres", "postgresql"}
-        self._sanitized_statement = statement_factory(dialect)
+        self._sanitize_statement = statement_factory(dialect)
         self._autocommit = False
 
     def execute(self, sql, *args, **kwargs):
         """Execute a SQL statement."""
-        statement = self._sanitized_statement(sql, *args, **kwargs)
+        statement = self._sanitize_statement(sql, *args, **kwargs)
         if statement.is_transaction_start():
             self._autocommit = False
 
