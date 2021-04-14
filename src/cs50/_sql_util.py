@@ -1,11 +1,18 @@
-"""Utility functions used by sql.py"""
+"""Utility functions used by sql.py.
+"""
 
 import contextlib
 import decimal
 import warnings
 
 
-def fetch_select_result(result):
+def process_select_result(result):
+    """Converts a SQLAlchemy result to a ``list`` of ``dict`` objects, each of which represents a
+    row in the result set.
+
+    :param result: A SQLAlchemy result
+    :type result: :class:`sqlalchemy.engine.Result`
+    """
     rows = [dict(row) for row in result.fetchall()]
     for row in rows:
         for column in row:
@@ -23,6 +30,9 @@ def fetch_select_result(result):
 
 @contextlib.contextmanager
 def raise_errors_for_warnings():
+    """Catches warnings and raises errors instead.
+    """
+
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         yield

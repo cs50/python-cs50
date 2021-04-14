@@ -1,4 +1,5 @@
-"""Sets up logging for cs50 library"""
+"""Sets up logging for the library.
+"""
 
 import logging
 import os.path
@@ -9,6 +10,22 @@ import traceback
 import termcolor
 
 
+def green(msg):
+    return _colored(msg, "green")
+
+
+def red(msg):
+    return _colored(msg, "red")
+
+
+def yellow(msg):
+    return _colored(msg, "yellow")
+
+
+def _colored(msg, color):
+    return termcolor.colored(str(msg), color)
+
+
 def _setup_logger():
     _configure_default_logger()
     _patch_root_handler_format_exception()
@@ -17,11 +34,16 @@ def _setup_logger():
 
 
 def _configure_default_logger():
-    """Configure default handler and formatter to prevent flask and werkzeug from adding theirs"""
+    """Configures a default handler and formatter to prevent flask and werkzeug from adding theirs.
+    """
+
     logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
 
 def _patch_root_handler_format_exception():
+    """Patches formatException for the root handler to use ``_format_exception``.
+    """
+
     try:
         formatter = logging.root.handlers[0].formatter
         formatter.formatException = lambda exc_info: _format_exception(*exc_info)
@@ -30,6 +52,10 @@ def _patch_root_handler_format_exception():
 
 
 def _configure_cs50_logger():
+    """Disables the cs50 logger by default. Disables logging propagation to prevent messages from
+    being logged more than once. Sets the logging handler and formatter.
+    """
+
     _logger = logging.getLogger("cs50")
     _logger.disabled = True
     _logger.setLevel(logging.DEBUG)
@@ -52,9 +78,8 @@ def _patch_excepthook():
 
 
 def _format_exception(type_, value, exc_tb):
-    """
-    Format traceback, darkening entries from global site-packages directories
-    and user-specific site-packages directory.
+    """Formats traceback, darkening entries from global site-packages directories and user-specific
+    site-packages directory.
     https://stackoverflow.com/a/46071447/5156190
     """
 
@@ -69,6 +94,5 @@ def _format_exception(type_, value, exc_tb):
             lines += line
         else:
             matches = re.search(r"^(\s*)(.*?)(\s*)$", line, re.DOTALL)
-            lines.append(
-                matches.group(1) + termcolor.colored(matches.group(2), "yellow") + matches.group(3))
+            lines.append(matches.group(1) + yellow(matches.group(2)) + matches.group(3))
     return "".join(lines).rstrip()

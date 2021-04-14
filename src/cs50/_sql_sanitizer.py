@@ -1,5 +1,3 @@
-"""Escapes SQL values"""
-
 import datetime
 import re
 
@@ -8,15 +6,19 @@ import sqlparse
 
 
 class SQLSanitizer:
-    """Escapes SQL values"""
+    """Sanitizes SQL values.
+    """
 
     def __init__(self, dialect):
         self._dialect = dialect
 
     def escape(self, value):
-        """
-        Escapes value using engine's conversion function.
+        """Escapes value using engine's conversion function.
         https://docs.sqlalchemy.org/en/latest/core/type_api.html#sqlalchemy.types.TypeEngine.literal_processor
+
+        :param value: The value to be sanitized
+
+        :returns: The sanitized value
         """
         # pylint: disable=too-many-return-statements
         if isinstance(value, (list, tuple)):
@@ -71,13 +73,22 @@ class SQLSanitizer:
         raise RuntimeError(f"unsupported value: {value}")
 
     def escape_iterable(self, iterable):
-        """Escapes a collection of values (e.g., list, tuple)"""
+        """Escapes each value in iterable and joins all the escaped values with ", ", formatted for
+        SQL's ``IN`` operator.
+
+        :param: An iterable of values to be escaped
+
+        :returns: A comma-separated list of escaped values from ``iterable``
+        :rtype: :class:`sqlparse.sql.TokenList`
+        """
+
         return sqlparse.sql.TokenList(
             sqlparse.parse(", ".join([str(self.escape(v)) for v in iterable])))
 
 
 def escape_verbatim_colon(value):
-    """Escapes verbatim colon from a value so as it is not confused with a placeholder"""
+    """Escapes verbatim colon from a value so as it is not confused with a parameter marker.
+    """
 
     # E.g., ':foo, ":foo,   :foo will be replaced with
     # '\:foo, "\:foo,   \:foo respectively

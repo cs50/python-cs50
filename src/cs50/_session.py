@@ -1,5 +1,3 @@
-"""Wraps a SQLAlchemy scoped session"""
-
 import sqlalchemy
 import sqlalchemy.orm
 
@@ -11,7 +9,8 @@ from ._session_util import (
 
 
 class Session:
-    """Wraps a SQLAlchemy scoped session"""
+    """Wraps a SQLAlchemy scoped session.
+    """
 
     def __init__(self, url, **engine_kwargs):
         if is_sqlite_url(url):
@@ -20,9 +19,16 @@ class Session:
         self._session = create_session(url, **engine_kwargs)
 
     def execute(self, statement):
-        """Converts statement to str and executes it"""
+        """Converts statement to str and executes it.
+
+        :param statement: The SQL statement to be executed
+        """
+
         # pylint: disable=no-member
         return self._session.execute(sqlalchemy.text(str(statement)))
 
     def __getattr__(self, attr):
+        """Proxies any attributes to the underlying SQLAlchemy scoped session.
+        """
+
         return getattr(self._session, attr)

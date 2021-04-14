@@ -1,4 +1,5 @@
-"""Utility functions used by _session.py"""
+"""Utility functions used by _session.py.
+"""
 
 import os
 import sqlite3
@@ -49,8 +50,11 @@ def _create_scoped_session(engine):
 
 
 def _disable_auto_begin_commit(dbapi_connection):
-    # Disable underlying API's own emitting of BEGIN and COMMIT so we can ourselves
-    # https://docs.sqlalchemy.org/en/13/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
+    """Disables the underlying API's own emitting of BEGIN and COMMIT so we can support manual
+    transactions.
+    https://docs.sqlalchemy.org/en/13/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
+    """
+
     dbapi_connection.isolation_level = None
 
 

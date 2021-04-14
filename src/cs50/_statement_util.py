@@ -1,4 +1,5 @@
-"""Utility functions used by _statement.py"""
+"""Utility functions used by _statement.py.
+"""
 
 import enum
 import re
@@ -19,6 +20,9 @@ operation_keywords = {
 
 
 class Paramstyle(enum.Enum):
+    """Represents the supported parameter marker styles.
+    """
+
     FORMAT = enum.auto()
     NAMED = enum.auto()
     NUMERIC = enum.auto()
@@ -27,6 +31,15 @@ class Paramstyle(enum.Enum):
 
 
 def format_and_parse(sql):
+    """Formats and parses a SQL statement. Raises ``RuntimeError`` if ``sql`` represents more than
+    one statement.
+
+    :param sql: The SQL statement to be formatted and parsed
+    :type sql: str
+
+    :returns: A list of unflattened SQLParse tokens that represent the parsed statement
+    """
+
     formatted_statements = sqlparse.format(sql, strip_comments=True).strip()
     parsed_statements = sqlparse.parse(formatted_statements)
     statement_count = len(parsed_statements)
@@ -43,6 +56,10 @@ def is_placeholder(ttype):
 
 
 def parse_placeholder(value):
+    """
+    :returns: A tuple of the paramstyle and the name of the parameter marker (if any) or ``None``
+    :rtype: tuple
+    """
     if value == "?":
         return Paramstyle.QMARK, None
 
