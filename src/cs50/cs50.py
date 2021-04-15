@@ -5,11 +5,14 @@ import sys
 
 
 def get_float(prompt):
+    """Reads a line of text from standard input and returns the equivalent float as precisely as
+    possible; if text does not represent a float, user is prompted to retry. If line can't be read,
+    returns None.
+
+    :type prompt: str
+
     """
-    Read a line of text from standard input and return the equivalent float
-    as precisely as possible; if text does not represent a double, user is
-    prompted to retry. If line can't be read, return None.
-    """
+
     while True:
         try:
             return _get_float(prompt)
@@ -29,11 +32,12 @@ def _get_float(prompt):
 
 
 def get_int(prompt):
+    """Reads a line of text from standard input and return the equivalent int; if text does not
+    represent an int, user is prompted to retry. If line can't be read, returns None.
+
+    :type prompt: str
     """
-    Read a line of text from standard input and return the equivalent int;
-    if text does not represent an int, user is prompted to retry. If line
-    can't be read, return None.
-    """
+
     while True:
         try:
             return _get_int(prompt)
@@ -53,12 +57,13 @@ def _get_int(prompt):
 
 
 def get_string(prompt):
+    """Reads a line of text from standard input and returns it as a string, sans trailing line
+    ending. Supports CR (\r), LF (\n), and CRLF (\r\n) as line endings. If user inputs only a line
+    ending, returns "", not None.  Returns None upon error or no input whatsoever (i.e., just EOF).
+
+    :type prompt: str
     """
-    Read a line of text from standard input and return it as a string,
-    sans trailing line ending. Supports CR (\r), LF (\n), and CRLF (\r\n)
-    as line endings. If user inputs only a line ending, returns "", not None.
-    Returns None upon error or no input whatsoever (i.e., just EOF).
-    """
+
     if not isinstance(prompt, str):
         raise TypeError("prompt must be of type str")
 
@@ -73,8 +78,7 @@ def _get_input(prompt):
 
 
 class _flushfile():
-    """
-    Disable buffering for standard output and standard error.
+    """ Disable buffering for standard output and standard error.
     http://stackoverflow.com/a/231216
     """
 
@@ -91,7 +95,8 @@ class _flushfile():
 
 
 def disable_output_buffering():
-    """Disables output buffering to prevent prompts from being buffered"""
+    """Disables output buffering to prevent prompts from being buffered.
+    """
     sys.stderr = _flushfile(sys.stderr)
     sys.stdout = _flushfile(sys.stdout)
 
