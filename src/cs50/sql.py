@@ -63,7 +63,10 @@ class SQL:
                 raise ValueError(exc.orig) from None
             # E.g., connection error or syntax error
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as exc:
-                connection.close()
+                if self._engine.get_existing_transaction_connection():
+                    self._engine.close_transaction_connection()
+                else:
+                    connection.close()
                 _logger.debug(red(statement))
                 raise RuntimeError(exc.orig) from None
 
