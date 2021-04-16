@@ -24,7 +24,7 @@ class SQL:
         dialect = self._get_dialect()
         self._is_postgres = dialect.name in {"postgres", "postgresql"}
         self._substitute_markers_with_params = statement_factory(dialect)
-        self._autocommit = False
+        self._autocommit = True
 
     def _get_dialect(self):
         return self._session.get_bind().dialect
