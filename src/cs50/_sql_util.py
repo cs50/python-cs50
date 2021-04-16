@@ -5,6 +5,8 @@ import contextlib
 import decimal
 import warnings
 
+import sqlalchemy
+
 
 def process_select_result(result):
     """Converts a SQLAlchemy result to a ``list`` of ``dict`` objects, each of which represents a
@@ -36,3 +38,14 @@ def raise_errors_for_warnings():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         yield
+
+
+def postgres_lastval(connection):
+    """
+    :returns: The ID of the last inserted row, if defined in this session, or None
+    """
+
+    try:
+        return connection.execute("SELECT LASTVAL()").first()[0]
+    except sqlalchemy.exc.OperationalError:
+        return None

@@ -3,9 +3,9 @@ import logging
 import sqlalchemy
 
 from ._logger import green, red, yellow
-from ._session import Session
+from ._engine import Engine
 from ._statement import statement_factory
-from ._sql_util import process_select_result, raise_errors_for_warnings
+from ._sql_util import postgres_lastval, process_select_result, raise_errors_for_warnings
 
 
 _logger = logging.getLogger("cs50")
@@ -20,14 +20,8 @@ class SQL:
         :param url: The database URL
         """
 
-        self._session = Session(url)
-        dialect = self._get_dialect()
-        self._is_postgres = dialect.name in {"postgres", "postgresql"}
-        self._substitute_markers_with_params = statement_factory(dialect)
-        self._autocommit = True
-
-    def _get_dialect(self):
-        return self._session.get_bind().dialect
+        self._engine = Engine(url)
+        self._substitute_markers_with_params = statement_factory(self._engine.dialect)
 
     def execute(self, sql, *args, **kwargs):
         """Executes a SQL statement.
@@ -46,72 +40,51 @@ class SQL:
         """
 
         statement = self._substitute_markers_with_params(sql, *args, **kwargs)
-        if statement.is_transaction_start():
-            self._disable_autocommit()
+        connection = self._engine.get_existing_transaction_connection()
+        if connection is None:
+            if statement.is_transaction_start():
+                connection = self._engine.get_transaction_connection()
+            else:
+                connection = self._engine.get_connection()
+        elif statement.is_transaction_start():
+            raise RuntimeError("nested transactions are not supported")
 
-        self._begin_transaction_in_autocommit_mode()
-        result = self._execute(statement)
-        self._commit_transaction_in_autocommit_mode()
+        return self._execute(statement, connection)
 
-        if statement.is_select():
-            ret = process_select_result(result)
-        elif statement.is_insert():
-            ret = self._last_row_id_or_none(result)
-        elif statement.is_delete() or statement.is_update():
-            ret = result.rowcount
+    def _execute(self, statement, connection):
+        with raise_errors_for_warnings():
+            try:
+                result = connection.execute(str(statement))
+            # E.g., failed constraint
+            except sqlalchemy.exc.IntegrityError as exc:
+                _logger.debug(yellow(statement))
+                if self._engine.get_existing_transaction_connection() is None:
+                    connection.close()
+                raise ValueError(exc.orig) from None
+            # E.g., connection error or syntax error
+            except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as exc:
+                connection.close()
+                _logger.debug(red(statement))
+                raise RuntimeError(exc.orig) from None
+
+            _logger.debug(green(statement))
+
+            if statement.is_select():
+                ret = process_select_result(result)
+            elif statement.is_insert():
+                ret = self._last_row_id_or_none(result)
+            elif statement.is_delete() or statement.is_update():
+                ret = result.rowcount
+            else:
+                ret = True
+
+        if self._engine.get_existing_transaction_connection():
+            if statement.is_transaction_end():
+                self._engine.close_transaction_connection()
         else:
-            ret = True
+            connection.close()
 
-        if statement.is_transaction_end():
-            self._enable_autocommit()
-
-        self._shutdown_session_in_autocommit_mode()
         return ret
-
-    def _disable_autocommit(self):
-        self._autocommit = False
-
-    def _begin_transaction_in_autocommit_mode(self):
-        if self._autocommit:
-            self._session.execute("BEGIN")
-
-    def _execute(self, statement):
-        """
-        :param statement: a SQL statement represented as a ``str`` or a
-        :class:`_statement.Statement`
-
-        :rtype: :class:`sqlalchemy.engine.Result`
-        """
-        try:
-            with raise_errors_for_warnings():
-                result = self._session.execute(statement)
-        # E.g., failed constraint
-        except sqlalchemy.exc.IntegrityError as exc:
-            _logger.debug(yellow(statement))
-            self._shutdown_session_in_autocommit_mode()
-            raise ValueError(exc.orig) from None
-        # E.g., connection error or syntax error
-        except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as exc:
-            self._shutdown_session()
-            _logger.debug(red(statement))
-            raise RuntimeError(exc.orig) from None
-
-        _logger.debug(green(statement))
-        return result
-
-    def _shutdown_session_in_autocommit_mode(self):
-        if self._autocommit:
-            self._shutdown_session()
-
-    def _shutdown_session(self):
-        self._session.remove()
-
-    def _commit_transaction_in_autocommit_mode(self):
-        if self._autocommit:
-            self._session.execute("COMMIT")
-
-    def _enable_autocommit(self):
-        self._autocommit = True
 
     def _last_row_id_or_none(self, result):
         """
@@ -121,15 +94,9 @@ class SQL:
         :returns: The ID of the last inserted row or ``None``
         """
 
-        if self._is_postgres:
-            return self._postgres_lastval()
+        if self._engine.is_postgres():
+            return postgres_lastval(result.connection)
         return result.lastrowid if result.rowcount == 1 else None
-
-    def _postgres_lastval(self):
-        try:
-            return self._session.execute("SELECT LASTVAL()").first()[0]
-        except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined in this session
-            return None
 
     def init_app(self, app):
         """Enables logging and registers a ``teardown_appcontext`` listener to remove the session.
@@ -140,6 +107,7 @@ class SQL:
 
         @app.teardown_appcontext
         def _(_):
-            self._shutdown_session()
+            self._engine.close_transaction_connection()
+
 
         logging.getLogger("cs50").disabled = False

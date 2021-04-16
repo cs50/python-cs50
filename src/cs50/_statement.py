@@ -64,7 +64,7 @@ class Statement:
         self._paramstyle = self._get_paramstyle()
         self._placeholders = self._get_placeholders()
         self._substitute_markers_with_escaped_params()
-        self._escape_verbatim_colons()
+        # self._escape_verbatim_colons()
 
     def _get_escaped_args(self, args):
         return [self._sql_sanitizer.escape(arg) for arg in args]
