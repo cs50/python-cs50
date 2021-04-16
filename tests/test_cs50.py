@@ -1,4 +1,3 @@
-import math
 import sys
 import unittest
 
@@ -95,7 +94,7 @@ class TestCS50(unittest.TestCase):
         def assert_equal(return_value, expected_value):
             with patch("cs50.cs50.get_string", return_value=return_value) as mock_get_string:
                 f = _get_float("Answer: ")
-                self.assertTrue(math.isclose(f, expected_value))
+                self.assertAlmostEqual(f, expected_value)
                 mock_get_string.assert_called_with("Answer: ")
 
         values = [
