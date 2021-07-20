@@ -150,7 +150,7 @@ class SQLTests(unittest.TestCase):
 class MySQLTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("mysql://root@localhost/test")
+        self.db = SQL("mysql://root@127.0.0.1/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), bin BLOB, PRIMARY KEY (id))")
@@ -160,7 +160,7 @@ class MySQLTests(SQLTests):
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("postgresql://postgres@localhost/test")
+        self.db = SQL("postgresql://postgres:postgres@127.0.0.1/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
