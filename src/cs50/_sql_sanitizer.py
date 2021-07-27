@@ -66,7 +66,7 @@ class SQLSanitizer:
             return sqlparse.sql.Token(sqlparse.tokens.String, string_processor(value))
 
         if value is None:
-            return sqlparse.sql.Token(sqlparse.tokens.Keyword, "NULL")
+            return sqlparse.sql.Token(sqlparse.tokens.Keyword, sqlalchemy.null())
 
         raise RuntimeError(f"unsupported value: {value}")
 
