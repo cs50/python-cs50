@@ -132,18 +132,9 @@ class SQLTests(unittest.TestCase):
         self.assertIn("count", self.db.execute("SELECT 1 AS count")[0])
 
     def tearDown(self):
-        self.db.execute("DROP TABLE cs50")
+        self.db.execute("DROP TABLE IF EXISTS cs50")
         self.db.execute("DROP TABLE IF EXISTS foo")
         self.db.execute("DROP TABLE IF EXISTS bar")
-
-    @classmethod
-    def tearDownClass(self):
-        try:
-            self.db.execute("DROP TABLE IF EXISTS cs50")
-        except Warning as e:
-            # suppress "unknown table"
-            if not str(e).startswith("(1051"):
-                raise e
 
 class MySQLTests(SQLTests):
     @classmethod
@@ -316,6 +307,10 @@ class SQLiteTests(SQLTests):
 
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
+
+    def test_none(self):
+        self.db.execute("CREATE TABLE foo (val INTEGER)")
+        self.db.execute("SELECT * FROM foo WHERE val = ?", None)
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
