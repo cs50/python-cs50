@@ -1,4 +1,5 @@
 import threading
+import warnings
 
 from ._engine_util import create_engine
 
@@ -11,6 +12,7 @@ class Engine:
     """
 
     def __init__(self, url):
+        url = _replace_scheme_if_postgres(url)
         self._engine = create_engine(url)
 
     def get_transaction_connection(self):
@@ -64,3 +66,23 @@ def _thread_local_connections():
         connections = thread_local_data.connections = {}
 
     return connections
+
+def _replace_scheme_if_postgres(url):
+    """
+    Replaces the postgres scheme with the postgresql scheme if possible since the postgres scheme
+    is deprecated.
+
+    :returns: url with postgresql scheme if the scheme was postgres; otherwise returns url as is
+    """
+
+    if url.startswith("postgres://"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("always")
+            warnings.warn(
+                "The postgres:// scheme is deprecated and will not be supported in the next major"
+                    + " release of the library. Please use the postgresql:// scheme instead.",
+                DeprecationWarning
+            )
+        url = f"postgresql{url[len('postgres'):]}"
+
+    return url
