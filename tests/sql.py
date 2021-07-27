@@ -9,7 +9,6 @@ from cs50.sql import SQL
 
 
 class SQLTests(unittest.TestCase):
-
     def test_multiple_statements(self):
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')")
 
@@ -146,7 +145,6 @@ class SQLTests(unittest.TestCase):
             if not str(e).startswith("(1051"):
                 raise e
 
-
 class MySQLTests(SQLTests):
     @classmethod
     def setUpClass(self):
@@ -155,7 +153,6 @@ class MySQLTests(SQLTests):
     def setUp(self):
         self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), bin BLOB, PRIMARY KEY (id))")
         self.db.execute("DELETE FROM cs50")
-
 
 class PostgresTests(SQLTests):
     @classmethod
@@ -174,7 +171,6 @@ class PostgresTests(SQLTests):
         db.execute("SELECT 1")
 
 class SQLiteTests(SQLTests):
-
     @classmethod
     def setUpClass(self):
         open("test.db", "w").close()
@@ -286,7 +282,6 @@ class SQLiteTests(SQLTests):
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", bar='bar', baz='baz', qux='qux')
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", 'baz', bar='bar')
 
-
     def test_numeric(self):
         self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
 
@@ -321,7 +316,6 @@ class SQLiteTests(SQLTests):
 
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
-
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
