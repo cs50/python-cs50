@@ -9,7 +9,6 @@ from cs50.sql import SQL
 
 
 class SQLTests(unittest.TestCase):
-
     def test_multiple_statements(self):
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO cs50(val) VALUES('baz'); INSERT INTO cs50(val) VALUES('qux')")
 
@@ -133,19 +132,9 @@ class SQLTests(unittest.TestCase):
         self.assertIn("count", self.db.execute("SELECT 1 AS count")[0])
 
     def tearDown(self):
-        self.db.execute("DROP TABLE cs50")
+        self.db.execute("DROP TABLE IF EXISTS cs50")
         self.db.execute("DROP TABLE IF EXISTS foo")
         self.db.execute("DROP TABLE IF EXISTS bar")
-
-    @classmethod
-    def tearDownClass(self):
-        try:
-            self.db.execute("DROP TABLE IF EXISTS cs50")
-        except Warning as e:
-            # suppress "unknown table"
-            if not str(e).startswith("(1051"):
-                raise e
-
 
 class MySQLTests(SQLTests):
     @classmethod
@@ -155,7 +144,6 @@ class MySQLTests(SQLTests):
     def setUp(self):
         self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), bin BLOB, PRIMARY KEY (id))")
         self.db.execute("DELETE FROM cs50")
-
 
 class PostgresTests(SQLTests):
     @classmethod
@@ -169,9 +157,11 @@ class PostgresTests(SQLTests):
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
 
+    def test_postgres_scheme(self):
+        db = SQL("postgres://postgres:postgres@127.0.0.1/test")
+        db.execute("SELECT 1")
 
 class SQLiteTests(SQLTests):
-
     @classmethod
     def setUpClass(self):
         open("test.db", "w").close()
@@ -283,7 +273,6 @@ class SQLiteTests(SQLTests):
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", bar='bar', baz='baz', qux='qux')
         self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", 'baz', bar='bar')
 
-
     def test_numeric(self):
         self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
 
@@ -319,6 +308,9 @@ class SQLiteTests(SQLTests):
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
 
+    def test_none(self):
+        self.db.execute("CREATE TABLE foo (val INTEGER)")
+        self.db.execute("SELECT * FROM foo WHERE val = ?", None)
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
