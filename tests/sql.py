@@ -27,6 +27,7 @@ class SQLTests(unittest.TestCase):
     def test_insert_returns_last_row_id(self):
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('foo')"), 1)
         self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('bar')"), 2)
+        self.assertEqual(self.db.execute("INSERT INTO cs50(val) VALUES('qux')"), 3)
 
     def test_select_all(self):
         self.assertEqual(self.db.execute("SELECT * FROM cs50"), [])
@@ -131,10 +132,149 @@ class SQLTests(unittest.TestCase):
     def test_identifier_case(self):
         self.assertIn("count", self.db.execute("SELECT 1 AS count")[0])
 
+    def test_none(self):
+        self.db.execute("CREATE TABLE foo (val INTEGER)")
+        self.db.execute("SELECT * FROM foo WHERE val = ?", None)
+
+    def test_integrity_constraints(self):
+        self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
+        self.db.execute("INSERT INTO foo VALUES(1)")
+        self.assertRaises(ValueError, self.db.execute, "INSERT INTO foo VALUES(1)")
+
+    def test_foreign_key_support(self):
+        self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
+        self.db.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
+        self.assertRaises(ValueError, self.db.execute, "INSERT INTO bar VALUES(50)")
+
+    def test_qmark(self):
+        self.db.execute("CREATE TABLE foo (firstname VARCHAR(255), lastname VARCHAR(255))")
+
+        self.db.execute("INSERT INTO foo VALUES (?, 'bar')", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "baz", "lastname": "bar"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES ('bar', ?)", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (?, ?)", "bar", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+
+        self.db.execute("INSERT INTO foo VALUES ('qux', 'quux')")
+        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ?", 'qux'), [{"firstname": "qux", "lastname": "quux"}])
+        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ? AND lastname = ?", "qux", "quux"), [{"firstname": "qux", "lastname": "quux"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (?)", ("bar", "baz"))
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (?)", ["bar", "baz"])
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (?,?)", "bar", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("CREATE TABLE bar (firstname VARCHAR(255))")
+
+        self.db.execute("INSERT INTO bar VALUES (?)", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
+        self.db.execute("DELETE FROM bar")
+
+        self.db.execute("INSERT INTO bar VALUES (?)", "baz")
+        self.db.execute("INSERT INTO bar VALUES (?)", "qux")
+        self.assertEqual(self.db.execute("SELECT * FROM bar WHERE firstname IN (?)", ("baz", "qux")), [{"firstname": "baz"}, {"firstname": "qux"}])
+        self.db.execute("DELETE FROM bar")
+
+        self.db.execute("INSERT INTO bar VALUES (?)", "baz")
+        self.db.execute("INSERT INTO bar VALUES (?)", "qux")
+        self.assertEqual(self.db.execute("SELECT * FROM bar WHERE firstname IN (?)", ["baz", "qux"]), [{"firstname": "baz"}, {"firstname": "qux"}])
+        self.db.execute("DELETE FROM bar")
+
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?)")
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)")
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", 'bar', 'baz', 'qux')
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", ('bar', 'baz', 'qux'))
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", ['bar', 'baz', 'qux'])
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", 'bar', baz='baz')
+
+    def test_named(self):
+        self.db.execute("CREATE TABLE foo (firstname VARCHAR(255), lastname VARCHAR(255))")
+
+        self.db.execute("INSERT INTO foo VALUES (:baz, 'bar')", baz="baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "baz", "lastname": "bar"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES ('bar', :baz)", baz="baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (:bar, :baz)", bar="bar", baz="baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+
+        self.db.execute("INSERT INTO foo VALUES ('qux', 'quux')")
+        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :qux", qux='qux'), [{"firstname": "qux", "lastname": "quux"}])
+        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :qux AND lastname = :quux", qux="qux", quux="quux"), [{"firstname": "qux", "lastname": "quux"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (:bar,:baz)", bar="bar", baz="baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (:baz, :baz)", baz="baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "baz", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("CREATE TABLE bar (firstname VARCHAR(255))")
+        self.db.execute("INSERT INTO bar VALUES (:baz)", baz="baz")
+        self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
+
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar)")
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)")
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", bar='bar', baz='baz', qux='qux')
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", 'baz', bar='bar')
+
+    def test_numeric(self):
+        self.db.execute("CREATE TABLE foo (firstname VARCHAR(255), lastname VARCHAR(255))")
+
+        self.db.execute("INSERT INTO foo VALUES (:1, 'bar')", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "baz", "lastname": "bar"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES ('bar', :1)", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (:1, :2)", "bar", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+
+        self.db.execute("INSERT INTO foo VALUES ('qux', 'quux')")
+        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :1", 'qux'), [{"firstname": "qux", "lastname": "quux"}])
+        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :1 AND lastname = :2", "qux", "quux"), [{"firstname": "qux", "lastname": "quux"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("INSERT INTO foo VALUES (:1,:2)", "bar", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
+        self.db.execute("CREATE TABLE bar (firstname VARCHAR(255))")
+        self.db.execute("INSERT INTO bar VALUES (:1)", "baz")
+        self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
+
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1)")
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)")
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', 'baz', 'qux')
+        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', baz='baz')
+
+    def test_cte(self):
+        self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
+
     def tearDown(self):
         self.db.execute("DROP TABLE IF EXISTS cs50")
-        self.db.execute("DROP TABLE IF EXISTS foo")
         self.db.execute("DROP TABLE IF EXISTS bar")
+        self.db.execute("DROP TABLE IF EXISTS foo")
 
 class MySQLTests(SQLTests):
     @classmethod
@@ -176,141 +316,6 @@ class SQLiteTests(SQLTests):
         self.assertEqual(self.db.execute("INSERT INTO foo (firstname, lastname) VALUES('firstname', 'lastname')"), 1)
         self.assertRaises(ValueError, self.db.execute, "INSERT INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')")
         self.assertEqual(self.db.execute("INSERT OR IGNORE INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')"), None)
-
-    def test_integrity_constraints(self):
-        self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
-        self.assertEqual(self.db.execute("INSERT INTO foo VALUES(1)"), 1)
-        self.assertRaises(ValueError, self.db.execute, "INSERT INTO foo VALUES(1)")
-
-    def test_foreign_key_support(self):
-        self.db.execute("CREATE TABLE foo(id INTEGER PRIMARY KEY)")
-        self.db.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
-        self.assertRaises(ValueError, self.db.execute, "INSERT INTO bar VALUES(50)")
-
-    def test_qmark(self):
-        self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
-
-        self.db.execute("INSERT INTO foo VALUES (?, 'bar')", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "baz", "lastname": "bar"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES ('bar', ?)", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (?, ?)", "bar", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-
-        self.db.execute("INSERT INTO foo VALUES ('qux', 'quux')")
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ?", 'qux'), [{"firstname": "qux", "lastname": "quux"}])
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = ? AND lastname = ?", "qux", "quux"), [{"firstname": "qux", "lastname": "quux"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (?)", ("bar", "baz"))
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (?)", ["bar", "baz"])
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (?,?)", "bar", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("CREATE TABLE bar (firstname STRING)")
-
-        self.db.execute("INSERT INTO bar VALUES (?)", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
-        self.db.execute("DELETE FROM bar")
-
-        self.db.execute("INSERT INTO bar VALUES (?)", "baz")
-        self.db.execute("INSERT INTO bar VALUES (?)", "qux")
-        self.assertEqual(self.db.execute("SELECT * FROM bar WHERE firstname IN (?)", ("baz", "qux")), [{"firstname": "baz"}, {"firstname": "qux"}])
-        self.db.execute("DELETE FROM bar")
-
-        self.db.execute("INSERT INTO bar VALUES (?)", "baz")
-        self.db.execute("INSERT INTO bar VALUES (?)", "qux")
-        self.assertEqual(self.db.execute("SELECT * FROM bar WHERE firstname IN (?)", ["baz", "qux"]), [{"firstname": "baz"}, {"firstname": "qux"}])
-        self.db.execute("DELETE FROM bar")
-
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?)")
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)")
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", 'bar', 'baz', 'qux')
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", ('bar', 'baz', 'qux'))
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", ['bar', 'baz', 'qux'])
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (?, ?)", 'bar', baz='baz')
-
-    def test_named(self):
-        self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
-
-        self.db.execute("INSERT INTO foo VALUES (:baz, 'bar')", baz="baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "baz", "lastname": "bar"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES ('bar', :baz)", baz="baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (:bar, :baz)", bar="bar", baz="baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-
-        self.db.execute("INSERT INTO foo VALUES ('qux', 'quux')")
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :qux", qux='qux'), [{"firstname": "qux", "lastname": "quux"}])
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :qux AND lastname = :quux", qux="qux", quux="quux"), [{"firstname": "qux", "lastname": "quux"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (:bar,:baz)", bar="bar", baz="baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("CREATE TABLE bar (firstname STRING)")
-        self.db.execute("INSERT INTO bar VALUES (:baz)", baz="baz")
-        self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
-
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar)")
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)")
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", bar='bar', baz='baz', qux='qux')
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:bar, :baz)", 'baz', bar='bar')
-
-    def test_numeric(self):
-        self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
-
-        self.db.execute("INSERT INTO foo VALUES (:1, 'bar')", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "baz", "lastname": "bar"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES ('bar', :1)", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (:1, :2)", "bar", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-
-        self.db.execute("INSERT INTO foo VALUES ('qux', 'quux')")
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :1", 'qux'), [{"firstname": "qux", "lastname": "quux"}])
-        self.assertEqual(self.db.execute("SELECT * FROM foo WHERE firstname = :1 AND lastname = :2", "qux", "quux"), [{"firstname": "qux", "lastname": "quux"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("INSERT INTO foo VALUES (:1,:2)", "bar", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
-        self.db.execute("DELETE FROM foo")
-
-        self.db.execute("CREATE TABLE bar (firstname STRING)")
-        self.db.execute("INSERT INTO bar VALUES (:1)", "baz")
-        self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])
-
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1)")
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)")
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', 'baz', 'qux')
-        self.assertRaises(RuntimeError, self.db.execute, "INSERT INTO foo VALUES (:1, :2)", 'bar', baz='baz')
-
-    def test_cte(self):
-        self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
-
-    def test_none(self):
-        self.db.execute("CREATE TABLE foo (val INTEGER)")
-        self.db.execute("SELECT * FROM foo WHERE val = ?", None)
 
 if __name__ == "__main__":
     suite = unittest.TestSuite([
