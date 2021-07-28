@@ -223,6 +223,10 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "bar", "lastname": "baz"}])
         self.db.execute("DELETE FROM foo")
 
+        self.db.execute("INSERT INTO foo VALUES (:baz, :baz)", baz="baz")
+        self.assertEqual(self.db.execute("SELECT * FROM foo"), [{"firstname": "baz", "lastname": "baz"}])
+        self.db.execute("DELETE FROM foo")
+
         self.db.execute("CREATE TABLE bar (firstname VARCHAR(255))")
         self.db.execute("INSERT INTO bar VALUES (:baz)", baz="baz")
         self.assertEqual(self.db.execute("SELECT * FROM bar"), [{"firstname": "baz"}])

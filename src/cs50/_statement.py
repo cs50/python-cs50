@@ -197,18 +197,21 @@ class Statement:
         Raises a ``RuntimeError`` if any parameters are missing or unused.
         """
 
-        unused_params = set(self._kwargs.keys())
+        unused_params = {param_name: True for param_name in self._kwargs.keys()}
         for token_index, param_name in self._placeholders.items():
             if param_name not in self._kwargs:
                 raise RuntimeError(f"missing value for placeholder ({param_name})")
 
             self._tokens[token_index] = self._kwargs[param_name]
-            unused_params.remove(param_name)
+            unused_params[param_name] = False
 
-        if len(unused_params) > 0:
-            joined_unused_params = get_human_readable_list(sorted(unused_params))
+        sorted_unique_unused_param_names = sorted(set(
+            param_name for param_name, unused in unused_params.items() if unused))
+        if len(sorted_unique_unused_param_names) > 0:
+            joined_unused_params = get_human_readable_list(sorted_unique_unused_param_names)
             raise RuntimeError(
-                f"unused value{'' if len(unused_params) == 1 else 's'} ({joined_unused_params})")
+                f"unused value{'' if len(sorted_unique_unused_param_names) == 1 else 's'}"
+                + " ({joined_unused_params})")
 
     def _escape_verbatim_colons(self):
         """Escapes verbatim colons from string literal and identifier tokens so they aren't treated
