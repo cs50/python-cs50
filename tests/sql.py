@@ -169,10 +169,6 @@ class PostgresTests(SQLTests):
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
 
-    def test_postgres_scheme(self):
-        db = SQL("postgres://postgres:postgres@127.0.0.1/test")
-        db.execute("SELECT 1")
-
 
 class SQLiteTests(SQLTests):
 
