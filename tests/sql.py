@@ -150,7 +150,6 @@ class SQLTests(unittest.TestCase):
 class MySQLTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("mysql://root@localhost/test")
         self.db = SQL("mysql://root@127.0.0.1/test")
 
     def setUp(self):
