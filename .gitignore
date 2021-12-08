@@ -1,10 +1,6 @@
 .*
-!.github
+!/.github/
 !.gitignore
-!.travis.yml
 *.db
 *.egg-info/
 *.pyc
-build/
-dist/
-test.db

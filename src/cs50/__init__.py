@@ -1,5 +1,20 @@
-from .cs50 import get_float, get_int, get_string
-from .sql import SQL
-from ._logger import _setup_logger
+import logging
+import os
+import sys
 
-_setup_logger()
+
+# Disable cs50 logger by default
+logging.getLogger("cs50").disabled = True
+
+# Import cs50_*
+from .cs50 import get_char, get_float, get_int, get_string
+try:
+    from .cs50 import get_long
+except ImportError:
+    pass
+
+# Hook into flask importing
+from . import flask
+
+# Wrap SQLAlchemy
+from .sql import SQL

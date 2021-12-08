@@ -1,104 +1,143 @@
-"""Exposes simple API for getting and validating user input"""
+from __future__ import print_function
 
+import inspect
+import logging
+import os
 import re
 import sys
 
-
-def get_float(prompt):
-    """Reads a line of text from standard input and returns the equivalent float as precisely as
-    possible; if text does not represent a float, user is prompted to retry. If line can't be read,
-    returns None.
-
-    :type prompt: str
-
-    """
-
-    while True:
-        try:
-            return _get_float(prompt)
-        except (OverflowError, ValueError):
-            pass
+from distutils.sysconfig import get_python_lib
+from os.path import abspath, join
+from termcolor import colored
+from traceback import format_exception
 
 
-def _get_float(prompt):
-    user_input = get_string(prompt)
-    if user_input is None:
-        return None
+# Configure default logging handler and formatter
+# Prevent flask, werkzeug, etc from adding default handler
+logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
-    if len(user_input) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", user_input):
-        return float(user_input)
+try:
+    # Patch formatException
+    logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
+except IndexError:
+    pass
 
-    raise ValueError(f"invalid float literal: {user_input}")
+# Configure cs50 logger
+_logger = logging.getLogger("cs50")
+_logger.setLevel(logging.DEBUG)
 
+# Log messages once
+_logger.propagate = False
 
-def get_int(prompt):
-    """Reads a line of text from standard input and return the equivalent int; if text does not
-    represent an int, user is prompted to retry. If line can't be read, returns None.
+handler = logging.StreamHandler()
+handler.setLevel(logging.DEBUG)
 
-    :type prompt: str
-    """
-
-    while True:
-        try:
-            return _get_int(prompt)
-        except (MemoryError, ValueError):
-            pass
-
-
-def _get_int(prompt):
-    user_input = get_string(prompt)
-    if user_input is None:
-        return None
-
-    if re.search(r"^[+-]?\d+$", user_input):
-        return int(user_input, 10)
-
-    raise ValueError(f"invalid int literal for base 10: {user_input}")
-
-
-def get_string(prompt):
-    """Reads a line of text from standard input and returns it as a string, sans trailing line
-    ending. Supports CR (\r), LF (\n), and CRLF (\r\n) as line endings. If user inputs only a line
-    ending, returns "", not None.  Returns None upon error or no input whatsoever (i.e., just EOF).
-
-    :type prompt: str
-    """
-
-    if not isinstance(prompt, str):
-        raise TypeError("prompt must be of type str")
-
-    try:
-        return _get_input(prompt)
-    except EOFError:
-        return None
-
-
-def _get_input(prompt):
-    return input(prompt)
+formatter = logging.Formatter("%(levelname)s: %(message)s")
+formatter.formatException = lambda exc_info: _formatException(*exc_info)
+handler.setFormatter(formatter)
+_logger.addHandler(handler)
 
 
 class _flushfile():
-    """ Disable buffering for standard output and standard error.
+    """
+    Disable buffering for standard output and standard error.
+
     http://stackoverflow.com/a/231216
     """
 
-    def __init__(self, stream):
-        self.stream = stream
+    def __init__(self, f):
+        self.f = f
 
     def __getattr__(self, name):
-        return object.__getattribute__(self.stream, name)
+        return object.__getattribute__(self.f, name)
 
-    def write(self, data):
-        """Writes data to stream"""
-        self.stream.write(data)
-        self.stream.flush()
+    def write(self, x):
+        self.f.write(x)
+        self.f.flush()
 
 
-def disable_output_buffering():
-    """Disables output buffering to prevent prompts from being buffered.
+sys.stderr = _flushfile(sys.stderr)
+sys.stdout = _flushfile(sys.stdout)
+
+
+def _formatException(type, value, tb):
     """
-    sys.stderr = _flushfile(sys.stderr)
-    sys.stdout = _flushfile(sys.stdout)
+    Format traceback, darkening entries from global site-packages directories
+    and user-specific site-packages directory.
+
+    https://stackoverflow.com/a/46071447/5156190
+    """
+
+    # Absolute paths to site-packages
+    packages = tuple(join(abspath(p), "") for p in sys.path[1:])
+
+    # Highlight lines not referring to files in site-packages
+    lines = []
+    for line in format_exception(type, value, tb):
+        matches = re.search(r"^  File \"([^\"]+)\", line \d+, in .+", line)
+        if matches and matches.group(1).startswith(packages):
+            lines += line
+        else:
+            matches = re.search(r"^(\s*)(.*?)(\s*)$", line, re.DOTALL)
+            lines.append(matches.group(1) + colored(matches.group(2), "yellow") + matches.group(3))
+    return "".join(lines).rstrip()
 
 
-disable_output_buffering()
+sys.excepthook = lambda type, value, tb: print(_formatException(type, value, tb), file=sys.stderr)
+
+
+def eprint(*args, **kwargs):
+    raise RuntimeError("The CS50 Library for Python no longer supports eprint, but you can use print instead!")
+
+
+def get_char(prompt):
+    raise RuntimeError("The CS50 Library for Python no longer supports get_char, but you can use get_string instead!")
+
+
+def get_float(prompt):
+    """
+    Read a line of text from standard input and return the equivalent float
+    as precisely as possible; if text does not represent a double, user is
+    prompted to retry. If line can't be read, return None.
+    """
+    while True:
+        s = get_string(prompt)
+        if s is None:
+            return None
+        if len(s) > 0 and re.search(r"^[+-]?\d*(?:\.\d*)?$", s):
+            try:
+                return float(s)
+            except (OverflowError, ValueError):
+                pass
+
+
+def get_int(prompt):
+    """
+    Read a line of text from standard input and return the equivalent int;
+    if text does not represent an int, user is prompted to retry. If line
+    can't be read, return None.
+    """
+    while True:
+        s = get_string(prompt)
+        if s is None:
+            return None
+        if re.search(r"^[+-]?\d+$", s):
+            try:
+                return int(s, 10)
+            except ValueError:
+                pass
+
+
+def get_string(prompt):
+    """
+    Read a line of text from standard input and return it as a string,
+    sans trailing line ending. Supports CR (\r), LF (\n), and CRLF (\r\n)
+    as line endings. If user inputs only a line ending, returns "", not None.
+    Returns None upon error or no input whatsoever (i.e., just EOF).
+    """
+    if type(prompt) is not str:
+        raise TypeError("prompt must be of type str")
+    try:
+        return input(prompt)
+    except EOFError:
+        return None
