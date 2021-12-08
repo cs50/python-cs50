@@ -290,7 +290,7 @@ class SQL(object):
         # Use this connection
         connection = getattr(_data, self._name())
 
-        """TODO
+        # Disconnect if/when a Flask app is torn down
         try:
             import flask
             assert flask.current_app
@@ -300,7 +300,6 @@ class SQL(object):
                 flask.current_app.teardown_appcontext(teardown_appcontext)
         except (ModuleNotFoundError, AssertionError):
             pass
-        """
 
         # Catch SQLAlchemy warnings
         with warnings.catch_warnings():
