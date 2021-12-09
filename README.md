@@ -30,7 +30,7 @@ s = cs50.get_string();
 1. In `/etc/profile.d/cli.sh`, remove `valgrind` function for now.
 1. Run `service mysql start`.
 1. Run `mysql -e 'CREATE DATABASE IF NOT EXISTS test;'`.
-1. In `/etc/postgresql/10/main/pg_hba.conf, change:
+1. In `/etc/postgresql/12/main/pg_hba.conf, change:
    ```
    local   all             postgres                                peer
    host    all             all             127.0.0.1/32            md5

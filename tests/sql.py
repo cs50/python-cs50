@@ -132,6 +132,11 @@ class SQLTests(unittest.TestCase):
     def test_identifier_case(self):
         self.assertIn("count", self.db.execute("SELECT 1 AS count")[0])
 
+    def test_lastrowid(self):
+        self.db.execute("CREATE TABLE foo(id SERIAL PRIMARY KEY, firstname TEXT, lastname TEXT)")
+        self.assertEqual(self.db.execute("INSERT INTO foo (firstname, lastname) VALUES('firstname', 'lastname')"), 1)
+        self.assertRaises(ValueError, self.db.execute, "INSERT INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')")
+
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
         self.db.execute("DROP TABLE IF EXISTS foo")
@@ -165,6 +170,7 @@ class PostgresTests(SQLTests):
     def setUp(self):
         self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")
         self.db.execute("DELETE FROM cs50")
+
 
     def test_cte(self):
         self.assertEqual(self.db.execute("WITH foo AS ( SELECT 1 AS bar ) SELECT bar FROM foo"), [{"bar": 1}])
@@ -323,7 +329,7 @@ class SQLiteTests(SQLTests):
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(SQLiteTests),
-        unittest.TestLoader().loadTestsFromTestCase(MySQLTests),
+        #unittest.TestLoader().loadTestsFromTestCase(MySQLTests),
         unittest.TestLoader().loadTestsFromTestCase(PostgresTests)
     ])
 
