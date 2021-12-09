@@ -353,7 +353,7 @@ class SQL(object):
 
                 # If INSERT, return primary key value for a newly inserted row (or None if none)
                 elif command == "INSERT":
-                    if self._engine.url.get_backend_name() in ["postgres", "postgresql"]:
+                    if self._engine.url.get_backend_name() == "postgresql":
                         try:
                             result = connection.execute("SELECT LASTVAL()")
                             ret = result.first()[0]
