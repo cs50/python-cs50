@@ -1,0 +1,34 @@
+services:
+  cli:
+    build: .
+    container_name: python-cs50
+    depends_on:
+      - mysql
+      - postgres 
+    environment:
+      MYSQL_HOST: mysql
+      POSTGRESQL_HOST: postgresql
+    links:
+      - mysql
+      - postgres
+    tty: true
+    volumes:
+      - .:/mnt
+  mysql:
+    environment:
+      MYSQL_DATABASE: test
+      MYSQL_ALLOW_EMPTY_PASSWORD: yes
+    healthcheck:
+      test: ["CMD", "mysqladmin", "-uroot", "ping"]
+    image: cs50/mysql:8
+    ports:
+      - 3306:3306
+  postgres:
+    image: postgres:12
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: test
+    ports:
+    - 5432:5432
+version: "3.6"

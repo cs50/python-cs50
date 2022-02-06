@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 import unittest
 import warnings
@@ -155,7 +156,7 @@ class SQLTests(unittest.TestCase):
 class MySQLTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("mysql://root@127.0.0.1/test")
+        self.db = SQL(f"mysql://root@{os.getenv('MYSQL_HOST')}/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id INTEGER NOT NULL AUTO_INCREMENT, val VARCHAR(16), bin BLOB, PRIMARY KEY (id))")
@@ -165,7 +166,7 @@ class MySQLTests(SQLTests):
 class PostgresTests(SQLTests):
     @classmethod
     def setUpClass(self):
-        self.db = SQL("postgresql://postgres:postgres@127.0.0.1/test")
+        self.db = SQL(f"postgresql://postgres:postgres@{os.getenv('POSTGRESQL_HOST')}/test")
 
     def setUp(self):
         self.db.execute("CREATE TABLE IF NOT EXISTS cs50 (id SERIAL PRIMARY KEY, val VARCHAR(16), bin BYTEA)")

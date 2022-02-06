@@ -61,18 +61,16 @@ class SQL(object):
             if not os.path.isfile(matches.group(1)):
                 raise RuntimeError("not a file: {}".format(matches.group(1)))
 
-        # Create engine, disabling SQLAlchemy's own autocommit mode, raising exception if back end's module not installed
-        self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False)
+        # Create engine, disabling SQLAlchemy's own autocommit mode raising exception if back end's module not installed;
+        # without isolation_level, PostgreSQL warns with "there is already a transaction in progress" for our own BEGIN and
+        # "there is no transaction in progress" for our own COMMIT
+        self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(autocommit=False, isolation_level="AUTOCOMMIT")
 
         # Get logger
         self._logger = logging.getLogger("cs50")
 
         # Listener for connections
         def connect(dbapi_connection, connection_record):
-
-            # Disable underlying API's own emitting of BEGIN and COMMIT so we can ourselves
-            # https://docs.sqlalchemy.org/en/13/dialects/sqlite.html#serializable-isolation-savepoints-transactional-ddl
-            dbapi_connection.isolation_level = None
 
             # Enable foreign key constraints
             if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
@@ -353,12 +351,30 @@ class SQL(object):
 
                 # If INSERT, return primary key value for a newly inserted row (or None if none)
                 elif command == "INSERT":
+
+                    # If PostgreSQL
                     if self._engine.url.get_backend_name() == "postgresql":
-                        try:
-                            result = connection.execute("SELECT LASTVAL()")
-                            ret = result.first()[0]
-                        except sqlalchemy.exc.OperationalError:  # If lastval is not yet defined for this connection
-                            ret = None
+
+                        # Return LASTVAL() or NULL, avoiding
+                        # "(psycopg2.errors.ObjectNotInPrerequisiteState) lastval is not yet defined in this session",
+                        # a la https://stackoverflow.com/a/24186770/5156190;
+                        # cf. https://www.psycopg.org/docs/errors.html re 55000
+                        result = connection.execute("""
+                            CREATE OR REPLACE FUNCTION _LASTVAL()
+                            RETURNS integer LANGUAGE plpgsql
+                            AS $$
+                            BEGIN
+                                BEGIN
+                                    RETURN (SELECT LASTVAL());
+                                EXCEPTION
+                                    WHEN SQLSTATE '55000' THEN RETURN NULL;
+                                END;
+                            END $$;
+                            SELECT _LASTVAL();
+                        """)
+                        ret = result.first()[0]
+
+                    # If not PostgreSQL
                     else:
                         ret = result.lastrowid if result.rowcount == 1 else None
 
