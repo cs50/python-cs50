@@ -6,11 +6,8 @@ services:
       - mysql
       - postgres 
     environment:
-      MYSQL_DATABASE: code50 
       MYSQL_HOST: mysql
-      MYSQL_PASSWORD: crimson
-      MYSQL_USERNAME: root
-      OAUTHLIB_INSECURE_TRANSPORT: 1
+      POSTGRESQL_HOST: postgresql
     links:
       - mysql
       - postgres
