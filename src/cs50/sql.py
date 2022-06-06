@@ -384,7 +384,7 @@ class SQL(object):
 
             # If constraint violated
             except sqlalchemy.exc.IntegrityError as e:
-                self._logger.error(termcolor.colored(statement, "red"))
+                self._logger.error(termcolor.colored(_statement, "red"))
                 e = ValueError(e.orig)
                 e.__cause__ = None
                 raise e
@@ -392,7 +392,7 @@ class SQL(object):
             # If user error
             except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError) as e:
                 self._disconnect()
-                self._logger.error(termcolor.colored(statement, "red"))
+                self._logger.error(termcolor.colored(_statement, "red"))
                 e = RuntimeError(e.orig)
                 e.__cause__ = None
                 raise e
