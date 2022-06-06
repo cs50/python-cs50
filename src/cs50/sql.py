@@ -382,9 +382,9 @@ class SQL(object):
                 elif command in ["DELETE", "UPDATE"]:
                     ret = result.rowcount
 
-            # If constraint violated, return None
+            # If constraint violated
             except sqlalchemy.exc.IntegrityError as e:
-                self._logger.warning(termcolor.colored(statement, "yellow"))
+                self._logger.error(termcolor.colored(statement, "red"))
                 e = ValueError(e.orig)
                 e.__cause__ = None
                 raise e
