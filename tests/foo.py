@@ -10,13 +10,15 @@ db = cs50.SQL("sqlite:///foo.db")
 logging.getLogger("cs50").disabled = False
 logging.getLogger("cs50").setLevel(logging.ERROR)
 
-db.execute("CREATE TABLE IF NOT EXISTS bar (firstname STRING UNIQUE)")
+db.execute("DROP TABLE IF EXISTS bar")
+db.execute("CREATE TABLE bar (firstname STRING UNIQUE)")
 
-db.execute("INSERT INTO bar VALUES (?)", "baz")
+db.execute("INSERT INTO bar VALUES (?)", None)
 db.execute("INSERT INTO bar VALUES (?)", "baz")
 db.execute("INSERT INTO bar VALUES (?)", "qux")
 db.execute("SELECT * FROM bar WHERE firstname IN (?)", ("baz", "qux"))
-db.execute("DELETE FROM bar")
+print(db.execute("SELECT * FROM bar"))
+#db.execute("DELETE FROM bar")
 
 """
 

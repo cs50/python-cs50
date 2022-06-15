@@ -476,7 +476,7 @@ class SQL(object):
             elif value is None:
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Keyword,
-                    sqlalchemy.types.NullType().literal_processor(self._engine.dialect)(value))
+                    sqlalchemy.null())
 
             # Unsupported value
             else:
