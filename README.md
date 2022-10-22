@@ -1,7 +1,5 @@
 # CS50 Library for Python
 
-[![Build Status](https://travis-ci.com/cs50/python-cs50.svg?branch=master)](https://travis-ci.org/cs50/python-cs50)
-
 ## Installation
 
 ```
