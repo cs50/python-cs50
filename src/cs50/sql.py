@@ -51,12 +51,12 @@ class SQL(object):
         import re
         import sqlalchemy
         import sqlalchemy.orm
-        import sqlite3
         import threading
 
         # Require that file already exist for SQLite
         matches = re.search(r"^sqlite:///(.+)$", url)
         if matches:
+            import sqlite3
             if not os.path.exists(matches.group(1)):
                 raise RuntimeError("does not exist: {}".format(matches.group(1)))
             if not os.path.isfile(matches.group(1)):
