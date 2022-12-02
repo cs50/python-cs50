@@ -53,11 +53,16 @@ class SQL(object):
         import sqlalchemy
         import sqlalchemy.orm
         import threading
+        
+        # Temporary fix for missing sqlite3 module on the buildpack stack
+        try:
+            import sqlite3
+        except:
+            pass
 
         # Require that file already exist for SQLite
         matches = re.search(r"^sqlite:///(.+)$", url)
         if matches:
-            import sqlite3
             if not os.path.exists(matches.group(1)):
                 raise RuntimeError("does not exist: {}".format(matches.group(1)))
             if not os.path.isfile(matches.group(1)):
@@ -75,7 +80,7 @@ class SQL(object):
         def connect(dbapi_connection, connection_record):
 
             # Enable foreign key constraints
-            if "sqlite3" in sys.modules and type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
+            if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
