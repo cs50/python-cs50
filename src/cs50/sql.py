@@ -74,7 +74,7 @@ class SQL(object):
         def connect(dbapi_connection, connection_record):
 
             # Enable foreign key constraints
-            if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
+            if 'sqlite3' in sys.modules and type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
                 cursor = dbapi_connection.cursor()
                 cursor.execute("PRAGMA foreign_keys=ON")
                 cursor.close()
