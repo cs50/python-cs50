@@ -10,7 +10,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"
     ],
     description="CS50 library for Python",
-    install_requires=["Flask>=1.0", "SQLAlchemy", "sqlparse", "termcolor", "wheel"],
+    install_requires=["Flask>=1.0", "SQLAlchemy==1.4.46", "sqlparse", "termcolor", "wheel"],
     keywords="cs50",
     license="GPLv3",
     long_description_content_type="text/markdown",

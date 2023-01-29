@@ -1,6 +1,7 @@
 .*
 !/.github/
 !.gitignore
+build/
 *.db
 *.egg-info/
 *.pyc

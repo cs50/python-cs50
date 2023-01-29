@@ -28,7 +28,7 @@ jobs:
     - name: Setup databases
       run: |
         pip install .
-        pip install mysqlclient psycopg2-binary
+        pip install mysqlclient psycopg2-binary SQLAlchemy==1.4.46
 
     - name: Run tests
       run: python tests/sql.py
