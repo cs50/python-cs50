@@ -81,7 +81,7 @@ class SQL(object):
 
             # Enable foreign key constraints
             try:
-                if type(dbapi_connection) is sqlite3.Connection:  # If back end is sqlite
+                if isinstance(dbapi_connection, sqlite3.Connection):  # If back end is sqlite
                     cursor = dbapi_connection.cursor()
                     cursor.execute("PRAGMA foreign_keys=ON")
                     cursor.close()
@@ -350,11 +350,11 @@ class SQL(object):
 
                             # Coerce decimal.Decimal objects to float objects
                             # https://groups.google.com/d/msg/sqlalchemy/0qXMYJvq8SA/oqtvMD9Uw-kJ
-                            if type(row[column]) is decimal.Decimal:
+                            if isinstance(row[column], decimal.Decimal):
                                 row[column] = float(row[column])
 
                             # Coerce memoryview objects (as from PostgreSQL's bytea columns) to bytes
-                            elif type(row[column]) is memoryview:
+                            elif isinstance(row[column], memoryview):
                                 row[column] = bytes(row[column])
 
                     # Rows to be returned
@@ -432,13 +432,13 @@ class SQL(object):
             import sqlalchemy
 
             # bool
-            if type(value) is bool:
+            if isinstance(value, bool):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Number,
                     sqlalchemy.types.Boolean().literal_processor(self._engine.dialect)(value))
 
             # bytes
-            elif type(value) is bytes:
+            elif isinstance(value, bytes):
                 if self._engine.url.get_backend_name() in ["mysql", "sqlite"]:
                     return sqlparse.sql.Token(sqlparse.tokens.Other, f"x'{value.hex()}'")  # https://dev.mysql.com/doc/refman/8.0/en/hexadecimal-literals.html
                 elif self._engine.url.get_backend_name() == "postgresql":
@@ -447,37 +447,37 @@ class SQL(object):
                     raise RuntimeError("unsupported value: {}".format(value))
 
             # datetime.date
-            elif type(value) is datetime.date:
+            elif isinstance(value, datetime.date):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
                     sqlalchemy.types.String().literal_processor(self._engine.dialect)(value.strftime("%Y-%m-%d")))
 
             # datetime.datetime
-            elif type(value) is datetime.datetime:
+            elif isinstance(value, datetime.datetime):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
                     sqlalchemy.types.String().literal_processor(self._engine.dialect)(value.strftime("%Y-%m-%d %H:%M:%S")))
 
             # datetime.time
-            elif type(value) is datetime.time:
+            elif isinstance(value, datetime.time):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
                     sqlalchemy.types.String().literal_processor(self._engine.dialect)(value.strftime("%H:%M:%S")))
 
             # float
-            elif type(value) is float:
+            elif isinstance(value, float):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Number,
                     sqlalchemy.types.Float().literal_processor(self._engine.dialect)(value))
 
             # int
-            elif type(value) is int:
+            elif isinstance(value, int):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.Number,
                     sqlalchemy.types.Integer().literal_processor(self._engine.dialect)(value))
 
             # str
-            elif type(value) is str:
+            elif isinstance(value, str):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
                     sqlalchemy.types.String().literal_processor(self._engine.dialect)(value))
@@ -493,7 +493,7 @@ class SQL(object):
                 raise RuntimeError("unsupported value: {}".format(value))
 
         # Escape value(s), separating with commas as needed
-        if type(value) in [list, tuple]:
+        if isinstance(value, (list, tuple)):
             return sqlparse.sql.TokenList(sqlparse.parse(", ".join([str(__escape(v)) for v in value])))
         else:
             return __escape(value)
