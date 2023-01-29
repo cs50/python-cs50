@@ -446,17 +446,17 @@ class SQL(object):
                 else:
                     raise RuntimeError("unsupported value: {}".format(value))
 
-            # datetime.date
-            elif isinstance(value, datetime.date):
-                return sqlparse.sql.Token(
-                    sqlparse.tokens.String,
-                    sqlalchemy.types.String().literal_processor(self._engine.dialect)(value.strftime("%Y-%m-%d")))
-
             # datetime.datetime
             elif isinstance(value, datetime.datetime):
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
                     sqlalchemy.types.String().literal_processor(self._engine.dialect)(value.strftime("%Y-%m-%d %H:%M:%S")))
+
+            # datetime.date
+            elif isinstance(value, datetime.date):
+                return sqlparse.sql.Token(
+                    sqlparse.tokens.String,
+                    sqlalchemy.types.String().literal_processor(self._engine.dialect)(value.strftime("%Y-%m-%d")))
 
             # datetime.time
             elif isinstance(value, datetime.time):
