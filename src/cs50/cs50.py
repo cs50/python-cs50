@@ -135,7 +135,7 @@ def get_string(prompt):
     as line endings. If user inputs only a line ending, returns "", not None.
     Returns None upon error or no input whatsoever (i.e., just EOF).
     """
-    if type(prompt) is not str:
+    if not isinstance(prompt, str):
         raise TypeError("prompt must be of type str")
     try:
         return input(prompt)
