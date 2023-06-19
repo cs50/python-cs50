@@ -1,4 +1,7 @@
-answer = input("")
-answer = answer.lower()
+def main():
+    answer = input("")
+    answer = answer.lower()
+    print(answer)
 
-print(answer)
+
+main()

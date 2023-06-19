@@ -1,4 +1,7 @@
-answer = input("")
-answer = answer.replace(" ", "...")
+def main():
+    answer = input("")
+    answer = answer.replace(" ", "...")
+    print(answer)
 
-print(answer)
+
+main()
