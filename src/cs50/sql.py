@@ -370,7 +370,7 @@ class SQL(object):
                         # "(psycopg2.errors.ObjectNotInPrerequisiteState) lastval is not yet defined in this session",
                         # a la https://stackoverflow.com/a/24186770/5156190;
                         # cf. https://www.psycopg.org/docs/errors.html re 55000
-                        result = connection.execute("""
+                        result = connection.execute(sqlalchemy.text("""
                             CREATE OR REPLACE FUNCTION _LASTVAL()
                             RETURNS integer LANGUAGE plpgsql
                             AS $$
@@ -382,7 +382,7 @@ class SQL(object):
                                 END;
                             END $$;
                             SELECT _LASTVAL();
-                        """)
+                        """))
                         ret = result.first()[0]
 
                     # If not PostgreSQL
