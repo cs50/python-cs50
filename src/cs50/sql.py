@@ -53,7 +53,7 @@ class SQL(object):
         import sqlalchemy
         import sqlalchemy.orm
         import threading
-        
+
         # Temporary fix for missing sqlite3 module on the buildpack stack
         try:
             import sqlite3
@@ -100,7 +100,7 @@ class SQL(object):
         self._logger.disabled = True
         try:
             connection = self._engine.connect()
-            connection.execute("SELECT 1")
+            connection.execute(sqlalchemy.text("SELECT 1"))
             connection.close()
         except sqlalchemy.exc.OperationalError as e:
             e = RuntimeError(_parse_exception(e))
@@ -344,7 +344,7 @@ class SQL(object):
                 if command == "SELECT":
 
                     # Coerce types
-                    rows = [dict(row) for row in result.fetchall()]
+                    rows = [dict(row) for row in result.mappings().all()]
                     for row in rows:
                         for column in row:
 
