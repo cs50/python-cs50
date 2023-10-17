@@ -6,10 +6,13 @@ def _wrap_flask(f):
     if f is None:
         return
 
-    from distutils.version import StrictVersion
+    from packaging.version import Version, InvalidVersion
     from .cs50 import _formatException
 
-    if f.__version__ < StrictVersion("1.0"):
+    try:
+        if Version(f.__version__) < Version("1.0"):
+            return
+    except InvalidVersion:
         return
 
     if os.getenv("CS50_IDE_TYPE") == "online":
