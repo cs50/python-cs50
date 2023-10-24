@@ -153,10 +153,10 @@ class SQL(object):
         full_statement = ' '.join(str(token) for token in statements[0].tokens if token.ttype in [sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML])
         full_statement = full_statement.upper()
 
-        # set of possible commands
+        # Set of possible commands
         commands = {"BEGIN", "CREATE VIEW", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}
 
-        # check if the full_statement starts with any command
+        # Check if the full_statement starts with any command
         command = next((cmd for cmd in commands if full_statement.startswith(cmd)), None)
 
         # Flatten statement
