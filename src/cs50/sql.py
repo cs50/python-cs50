@@ -100,7 +100,7 @@ class SQL(object):
         self._logger.disabled = True
         try:
             connection = self._engine.connect()
-            connection.execute("SELECT 1")
+            connection.execute(sqlalchemy.text("SELECT 1"))
             connection.close()
         except sqlalchemy.exc.OperationalError as e:
             e = RuntimeError(_parse_exception(e))
@@ -153,10 +153,10 @@ class SQL(object):
         full_statement = ' '.join(str(token) for token in statements[0].tokens if token.ttype in [sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML])
         full_statement = full_statement.upper()
 
-        # set of possible commands
+        # Set of possible commands
         commands = {"BEGIN", "CREATE VIEW", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}
 
-        # check if the full_statement starts with any command
+        # Check if the full_statement starts with any command
         command = next((cmd for cmd in commands if full_statement.startswith(cmd)), None)
 
         # Flatten statement
@@ -344,7 +344,7 @@ class SQL(object):
                 if command == "SELECT":
 
                     # Coerce types
-                    rows = [dict(row) for row in result.fetchall()]
+                    rows = [dict(row) for row in result.mappings().all()]
                     for row in rows:
                         for column in row:
 
@@ -370,7 +370,7 @@ class SQL(object):
                         # "(psycopg2.errors.ObjectNotInPrerequisiteState) lastval is not yet defined in this session",
                         # a la https://stackoverflow.com/a/24186770/5156190;
                         # cf. https://www.psycopg.org/docs/errors.html re 55000
-                        result = connection.execute("""
+                        result = connection.execute(sqlalchemy.text("""
                             CREATE OR REPLACE FUNCTION _LASTVAL()
                             RETURNS integer LANGUAGE plpgsql
                             AS $$
@@ -382,7 +382,7 @@ class SQL(object):
                                 END;
                             END $$;
                             SELECT _LASTVAL();
-                        """)
+                        """))
                         ret = result.first()[0]
 
                     # If not PostgreSQL
