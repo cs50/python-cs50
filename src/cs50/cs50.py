@@ -6,7 +6,6 @@ import os
 import re
 import sys
 
-from distutils.sysconfig import get_python_lib
 from os.path import abspath, join
 from termcolor import colored
 from traceback import format_exception

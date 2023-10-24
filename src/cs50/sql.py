@@ -149,15 +149,15 @@ class SQL(object):
         if len(args) > 0 and len(kwargs) > 0:
             raise RuntimeError("cannot pass both positional and named parameters")
 
-        # Infer command from (unflattened) statement
-        for token in statements[0]:
-            if token.ttype in [sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML]:
-                token_value = token.value.upper()
-                if token_value in ["BEGIN", "DELETE", "INSERT", "SELECT", "START", "UPDATE"]:
-                    command = token_value
-                    break
-        else:
-            command = None
+        # Infer command from flattened statement to a single string separated by spaces
+        full_statement = ' '.join(str(token) for token in statements[0].tokens if token.ttype in [sqlparse.tokens.Keyword, sqlparse.tokens.Keyword.DDL, sqlparse.tokens.Keyword.DML])
+        full_statement = full_statement.upper()
+
+        # set of possible commands
+        commands = {"BEGIN", "CREATE VIEW", "DELETE", "INSERT", "SELECT", "START", "UPDATE"}
+
+        # check if the full_statement starts with any command
+        command = next((cmd for cmd in commands if full_statement.startswith(cmd)), None)
 
         # Flatten statement
         tokens = list(statements[0].flatten())
@@ -392,6 +392,10 @@ class SQL(object):
                 # If DELETE or UPDATE, return number of rows matched
                 elif command in ["DELETE", "UPDATE"]:
                     ret = result.rowcount
+
+                # If CREATE VIEW, return True
+                elif command == "CREATE VIEW":
+                    ret = True
 
             # If constraint violated
             except sqlalchemy.exc.IntegrityError as e:
