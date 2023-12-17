@@ -17,7 +17,9 @@ logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.DEBUG)
 
 try:
     # Patch formatException
-    logging.root.handlers[0].formatter.formatException = lambda exc_info: _formatException(*exc_info)
+    logging.root.handlers[
+        0
+    ].formatter.formatException = lambda exc_info: _formatException(*exc_info)
 except IndexError:
     pass
 
@@ -37,26 +39,31 @@ handler.setFormatter(formatter)
 _logger.addHandler(handler)
 
 
-class _flushfile():
+class _Unbuffered:
     """
     Disable buffering for standard output and standard error.
 
-    http://stackoverflow.com/a/231216
+    https://stackoverflow.com/a/107717
+    https://docs.python.org/3/library/io.html
     """
 
-    def __init__(self, f):
-        self.f = f
+    def __init__(self, stream):
+        self.stream = stream
 
-    def __getattr__(self, name):
-        return getattr(self.f, name)
+    def __getattr__(self, attr):
+        return getattr(self.stream, attr)
 
-    def write(self, x):
-        self.f.write(x)
-        self.f.flush()
+    def write(self, b):
+        self.stream.write(b)
+        self.stream.flush()
+
+    def writelines(self, lines):
+        self.stream.writelines(lines)
+        self.stream.flush()
 
 
-sys.stderr = _flushfile(sys.stderr)
-sys.stdout = _flushfile(sys.stdout)
+sys.stderr = _Unbuffered(sys.stderr)
+sys.stdout = _Unbuffered(sys.stdout)
 
 
 def _formatException(type, value, tb):
@@ -78,19 +85,29 @@ def _formatException(type, value, tb):
             lines += line
         else:
             matches = re.search(r"^(\s*)(.*?)(\s*)$", line, re.DOTALL)
-            lines.append(matches.group(1) + colored(matches.group(2), "yellow") + matches.group(3))
+            lines.append(
+                matches.group(1)
+                + colored(matches.group(2), "yellow")
+                + matches.group(3)
+            )
     return "".join(lines).rstrip()
 
 
-sys.excepthook = lambda type, value, tb: print(_formatException(type, value, tb), file=sys.stderr)
+sys.excepthook = lambda type, value, tb: print(
+    _formatException(type, value, tb), file=sys.stderr
+)
 
 
 def eprint(*args, **kwargs):
-    raise RuntimeError("The CS50 Library for Python no longer supports eprint, but you can use print instead!")
+    raise RuntimeError(
+        "The CS50 Library for Python no longer supports eprint, but you can use print instead!"
+    )
 
 
 def get_char(prompt):
-    raise RuntimeError("The CS50 Library for Python no longer supports get_char, but you can use get_string instead!")
+    raise RuntimeError(
+        "The CS50 Library for Python no longer supports get_char, but you can use get_string instead!"
+    )
 
 
 def get_float(prompt):
