@@ -399,6 +399,8 @@ class SQL(object):
 
             # If constraint violated
             except sqlalchemy.exc.IntegrityError as e:
+                if self._autocommit:
+                    connection.execute(sqlalchemy.text("ROLLBACK"))
                 self._logger.error(termcolor.colored(_statement, "red"))
                 e = ValueError(e.orig)
                 e.__cause__ = None
