@@ -48,7 +48,7 @@ class _flushfile():
         self.f = f
 
     def __getattr__(self, name):
-        return object.__getattribute__(self.f, name)
+        return getattr(self.f, name)
 
     def write(self, x):
         self.f.write(x)
