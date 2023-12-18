@@ -336,7 +336,7 @@ class SQLiteTests(SQLTests):
 if __name__ == "__main__":
     suite = unittest.TestSuite([
         unittest.TestLoader().loadTestsFromTestCase(SQLiteTests),
-        #unittest.TestLoader().loadTestsFromTestCase(MySQLTests),
+        unittest.TestLoader().loadTestsFromTestCase(MySQLTests),
         unittest.TestLoader().loadTestsFromTestCase(PostgresTests)
     ])
 

@@ -20,7 +20,7 @@ services:
       MYSQL_ALLOW_EMPTY_PASSWORD: yes
     healthcheck:
       test: ["CMD", "mysqladmin", "-uroot", "ping"]
-    image: cs50/mysql:8
+    image: cs50/mysql
     ports:
       - 3306:3306
   postgres:
