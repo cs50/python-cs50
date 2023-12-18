@@ -7,7 +7,7 @@ services:
       - postgres 
     environment:
       MYSQL_HOST: mysql
-      POSTGRESQL_HOST: postgresql
+      POSTGRESQL_HOST: postgres
     links:
       - mysql
       - postgres
