@@ -563,19 +563,12 @@ class SQL(object):
 
             # str
             elif isinstance(value, str):
-<<<<<<< HEAD
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
                     sqlalchemy.types.String().literal_processor(self._engine.dialect)(
                         value
                     ),
                 )
-=======
-                literal = sqlalchemy.types.String().literal_processor(self._engine.dialect)(value)
-                #if self._engine.dialect.identifier_preparer._double_percents:
-                #    literal = literal.replace("%%", "%")
-                return sqlparse.sql.Token(sqlparse.tokens.String, literal)
->>>>>>> 3863555 (fixes #171)
 
             # None
             elif value is None:
