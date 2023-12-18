@@ -10,7 +10,7 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"
     ],
     description="CS50 library for Python",
-    install_requires=["Flask>=1.0", "packaging", "SQLAlchemy<3", "sqlparse", "termcolor", "wheel"],
+    install_requires=["Flask>=1.0", "packaging", "SQLAlchemy>=2,<3", "sqlparse", "termcolor", "wheel"],
     keywords="cs50",
     license="GPLv3",
     long_description_content_type="text/markdown",
@@ -18,5 +18,5 @@ setup(
     package_dir={"": "src"},
     packages=["cs50"],
     url="https://github.com/cs50/python-cs50",
-    version="9.3.3"
+    version="9.3.4"
 )
