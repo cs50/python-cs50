@@ -138,6 +138,12 @@ class SQLTests(unittest.TestCase):
         self.assertEqual(self.db.execute("INSERT INTO foo (firstname, lastname) VALUES('firstname', 'lastname')"), 1)
         self.assertRaises(ValueError, self.db.execute, "INSERT INTO foo (id, firstname, lastname) VALUES(1, 'firstname', 'lastname')")
 
+    def test_url(self):
+        url = "https://www.amazon.es/Desesperaci%C3%B3n-BEST-SELLER-Stephen-King/dp/8497595890"
+        self.db.execute("CREATE TABLE foo(id SERIAL PRIMARY KEY, url TEXT)")
+        self.db.execute("INSERT INTO foo (url) VALUES(?)", url)
+        self.assertEqual(self.db.execute("SELECT url FROM foo")[0]["url"], url)
+
     def tearDown(self):
         self.db.execute("DROP TABLE cs50")
         self.db.execute("DROP TABLE IF EXISTS foo")

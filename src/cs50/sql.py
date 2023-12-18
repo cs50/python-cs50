@@ -71,8 +71,12 @@ class SQL(object):
         # without isolation_level, PostgreSQL warns with "there is already a transaction in progress" for our own BEGIN and
         # "there is no transaction in progress" for our own COMMIT
         self._engine = sqlalchemy.create_engine(url, **kwargs).execution_options(
-            autocommit=False, isolation_level="AUTOCOMMIT"
+            autocommit=False, isolation_level="AUTOCOMMIT", no_parameters=True
         )
+
+        # Avoid doubly escaping percent signs, since no_parameters=True anyway
+        # https://github.com/cs50/python-cs50/issues/171
+        self._engine.dialect.identifier_preparer._double_percents = False
 
         # Get logger
         self._logger = logging.getLogger("cs50")
@@ -559,12 +563,19 @@ class SQL(object):
 
             # str
             elif isinstance(value, str):
+<<<<<<< HEAD
                 return sqlparse.sql.Token(
                     sqlparse.tokens.String,
                     sqlalchemy.types.String().literal_processor(self._engine.dialect)(
                         value
                     ),
                 )
+=======
+                literal = sqlalchemy.types.String().literal_processor(self._engine.dialect)(value)
+                #if self._engine.dialect.identifier_preparer._double_percents:
+                #    literal = literal.replace("%%", "%")
+                return sqlparse.sql.Token(sqlparse.tokens.String, literal)
+>>>>>>> 3863555 (fixes #171)
 
             # None
             elif value is None:
