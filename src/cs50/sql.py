@@ -177,6 +177,7 @@ class SQL(object):
             "SELECT",
             "START",
             "UPDATE",
+            "VACUUM",
         }
 
         # Check if the full_statement starts with any command
@@ -378,7 +379,7 @@ class SQL(object):
                 )
 
                 # Check for start of transaction
-                if command in ["BEGIN", "START"]:
+                if command in ["BEGIN", "START", "VACUUM"]:  # cannot VACUUM from within a transaction
                     self._autocommit = False
 
                 # Execute statement
@@ -389,7 +390,7 @@ class SQL(object):
                     connection.execute(sqlalchemy.text("COMMIT"))
 
                 # Check for end of transaction
-                if command in ["COMMIT", "ROLLBACK"]:
+                if command in ["COMMIT", "ROLLBACK", "VACUUM"]:  # cannot VACUUM from within a transaction
                     self._autocommit = True
 
                 # Return value
