@@ -329,12 +329,12 @@ class SQL(object):
                 sqlparse.tokens.Literal.String,
                 sqlparse.tokens.Literal.String.Single,
             ]:
-                token.value = re.sub("(^'|\s+):", r"\1\:", token.value)
+                token.value = re.sub(r"(^'|\s+):", r"\1\:", token.value)
 
             # In identifier
             # https://www.sqlite.org/lang_keywords.html
             elif token.ttype == sqlparse.tokens.Literal.String.Symbol:
-                token.value = re.sub('(^"|\s+):', r"\1\:", token.value)
+                token.value = re.sub(r'(^"|\s+):', r"\1\:", token.value)
 
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
