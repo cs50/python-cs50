@@ -177,6 +177,7 @@ class SQL(object):
             "SELECT",
             "START",
             "UPDATE",
+            "VACUUM",
         }
 
         # Check if the full_statement starts with any command
@@ -328,12 +329,12 @@ class SQL(object):
                 sqlparse.tokens.Literal.String,
                 sqlparse.tokens.Literal.String.Single,
             ]:
-                token.value = re.sub("(^'|\s+):", r"\1\:", token.value)
+                token.value = re.sub(r"(^'|\s+):", r"\1\:", token.value)
 
             # In identifier
             # https://www.sqlite.org/lang_keywords.html
             elif token.ttype == sqlparse.tokens.Literal.String.Symbol:
-                token.value = re.sub('(^"|\s+):', r"\1\:", token.value)
+                token.value = re.sub(r'(^"|\s+):', r"\1\:", token.value)
 
         # Join tokens into statement
         statement = "".join([str(token) for token in tokens])
@@ -378,7 +379,7 @@ class SQL(object):
                 )
 
                 # Check for start of transaction
-                if command in ["BEGIN", "START"]:
+                if command in ["BEGIN", "START", "VACUUM"]:  # cannot VACUUM from within a transaction
                     self._autocommit = False
 
                 # Execute statement
@@ -389,7 +390,7 @@ class SQL(object):
                     connection.execute(sqlalchemy.text("COMMIT"))
 
                 # Check for end of transaction
-                if command in ["COMMIT", "ROLLBACK"]:
+                if command in ["COMMIT", "ROLLBACK", "VACUUM"]:  # cannot VACUUM from within a transaction
                     self._autocommit = True
 
                 # Return value
