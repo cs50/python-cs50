@@ -171,7 +171,7 @@ def read_csv(file: str):
                 rows.append(row)
             return rows
     except FileNotFoundError:
-        print("Error: The file {file} was not found")
+        print(f"Error: The file {file} was not found")
         return []
     except ValueError as val_err:
         print(f"Error: {val_err}")
