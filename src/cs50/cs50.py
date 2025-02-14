@@ -207,4 +207,16 @@ def binary_search(array, target):
 
     return -1
 
+
+def write_csv(file: str, data: list) -> bool:
+    try:
+        with open(file, 'w', newline='', encoding='utf-8') as f:
+            csv.writer(f).writerows(data)
+        return True
+    except IOError as io_err:
+        print(f"Error: {io_err}")
+        return False
+    except Exception as ex:
+        print(f"An error occured while writing to {file}, error: {ex}")
+        return False
 # Changes made by OmarSSpy
