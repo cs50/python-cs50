@@ -4,7 +4,7 @@ services:
     container_name: python-cs50
     depends_on:
       - mysql
-      - postgres 
+      - postgres
     environment:
       MYSQL_HOST: mysql
       POSTGRESQL_HOST: postgres
@@ -30,5 +30,4 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: test
     ports:
-    - 5432:5432
-version: "3.6"
+      - 5432:5432
