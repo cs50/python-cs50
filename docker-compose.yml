@@ -31,4 +31,3 @@ services:
       POSTGRES_DB: test
     ports:
     - 5432:5432
-version: "3.6"
