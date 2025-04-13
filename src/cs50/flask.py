@@ -1,7 +1,7 @@
 import os
-# import pkgutil # Removed pkgutil
 import sys
-import importlib.util # Added importlib.util
+import importlib.util
+import warnings
 
 
 def _wrap_flask(f):
@@ -19,8 +19,6 @@ def _wrap_flask(f):
         # If packaging is not installed, cannot check version, so assume we can't wrap
         return
 
-    # Avoid importing cs50 unless absolutely necessary (within the version check)
-    # from .cs50 import _formatException # _formatException is not used in this function
 
     try:
         # Check Flask version compatibility
@@ -30,8 +28,6 @@ def _wrap_flask(f):
         # Handle invalid version strings or if Flask doesn't have __version__
         return
     except Exception:
-        # Chnage `except:` to `except Exception:` to align with best practices
-        # Catch any other unexpected errors during version check
         return
 
     # Apply ProxyFix only in CS50 IDE online environment
@@ -42,17 +38,12 @@ def _wrap_flask(f):
             # If werkzeug (a Flask dependency) is missing or ProxyFix moved, cannot apply fix
             return
 
-        # Get the original Flask.__init__
         _flask_init_before = f.Flask.__init__
 
-        # Define the wrapped __init__ method
         def _flask_init_after(self, *args, **kwargs):
             _flask_init_before(self, *args, **kwargs)
-            # Apply ProxyFix for handling reverse proxies (like the one in CS50 IDE)
-            # x_proto=1 tells ProxyFix to trust the X-Forwarded-Proto header
-            self.wsgi_app = ProxyFix(
-                self.wsgi_app, x_proto=1
-            )
+            # Apply ProxyFix to handle reverse proxies in CS50 IDE (x_proto=1 trusts X-Forwarded-Proto header)
+            self.wsgi_app = ProxyFix(self.wsgi_app, x_proto=1)
 
         # Monkey-patch Flask's __init__
         f.Flask.__init__ = _flask_init_after
@@ -92,10 +83,10 @@ else:
             # Monkey-patch the loader's exec_module method with our wrapper
             flask_spec.loader.exec_module = _exec_module_after
 
-        # else:
-            # Optional: Handle the unlikely case where the loader doesn't have exec_module
-            # pass or log a warning if necessary
+        else:
+            # Handle the unlikely case where the loader doesn't have exec_module
+            warnings.warn("Flask loader doesn't support the expected exec_module interface")
 
-    # else:
-        # Optional: Handle the case where Flask spec wasn't found (Flask not installed?)
-        # pass or log a warning if necessary
+    else:
+        # Handle the case where Flask spec wasn't found (Flask not installed?)
+        warnings.warn("Flask module specification not found. Flask may not be installed.")
