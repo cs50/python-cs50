@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import sys
+import csv
 
 from os.path import abspath, join
 from termcolor import colored
@@ -157,3 +158,65 @@ def get_string(prompt):
         return input(prompt)
     except EOFError:
         return None
+
+# I implemented a beginner friendly function to read .csv files, this functions sort as a training wheel for File I/O
+# I am currently taking this course and I think its a good idea for future years
+
+def read_csv(file: str):
+    try:
+        with open(file, 'r') as f:
+            reader = csv.reader(f)
+            rows = []
+            for row in reader:
+                rows.append(row)
+            return rows
+    except FileNotFoundError:
+        print(f"Error: The file {file} was not found")
+        return []
+    except ValueError as val_err:
+        print(f"Error: {val_err}")
+
+# The binary_search function will be passed two arguments and it will use binary search to find the target
+# This function can help cs50 students implement binary search in their projects until they figure out how to code it themselves
+# If the passed array isnt sorted ascendantly, the function will not function and return -2
+
+
+def binary_search(array, target):
+    sorted_array = False
+    for i in range(1, len(array)):
+        if array[i] < array[i-1]:
+            print(f"Error: Array:{array} not sorted")
+            return -2
+        else:
+            sorted_array = True
+    
+    if sorted_array:
+        low = 0
+        high = len(array) - 1
+        
+        while low <= high:
+            mid = (low + high) // 2
+            g = array[mid]
+
+            if g == target:
+                return mid
+            elif g > target:
+                high = mid - 1
+            elif g < target:
+                low = mid + 1
+
+    return -1
+
+
+def write_csv(file: str, data: list) -> bool:
+    try:
+        with open(file, 'w', newline='', encoding='utf-8') as f:
+            csv.writer(f).writerows(data)
+        return True
+    except IOError as io_err:
+        print(f"Error: {io_err}")
+        return False
+    except Exception as ex:
+        print(f"An error occured while writing to {file}, error: {ex}")
+        return False
+# Changes made by OmarSSpy
