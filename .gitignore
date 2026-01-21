@@ -5,3 +5,4 @@ build/
 *.db
 *.egg-info/
 *.pyc
+foo.db
