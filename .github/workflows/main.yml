@@ -52,7 +52,7 @@ jobs:
       - name: Get Version
         id: py_version
         run: |
-          echo ::set-output name=version::$(python3 setup.py --version)
+          echo "version=$(python3 setup.py --version)" >> $GITHUB_OUTPUT
 
       - name: Create Release
         if: ${{ github.ref == 'refs/heads/main' }}
