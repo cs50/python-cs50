@@ -37,7 +37,7 @@ if "flask" in sys.modules:
 # If Flask wasn't imported
 else:
     spec = importlib.util.find_spec("flask")
-    if spec.loader:
+    if spec and spec.loader:
         _exec_module_before = spec.loader.exec_module
 
         def _exec_module_after(*args, **kwargs):
