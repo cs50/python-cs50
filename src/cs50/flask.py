@@ -1,5 +1,5 @@
 import os
-import pkgutil
+import importlib.util
 import sys
 
 
@@ -36,12 +36,12 @@ if "flask" in sys.modules:
 
 # If Flask wasn't imported
 else:
-    flask_loader = pkgutil.get_loader("flask")
-    if flask_loader:
-        _exec_module_before = flask_loader.exec_module
+    spec = importlib.util.find_spec("flask")
+    if spec and spec.loader:
+        _exec_module_before = spec.loader.exec_module
 
         def _exec_module_after(*args, **kwargs):
             _exec_module_before(*args, **kwargs)
             _wrap_flask(sys.modules["flask"])
 
-        flask_loader.exec_module = _exec_module_after
+        spec.loader.exec_module = _exec_module_after
