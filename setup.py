@@ -18,5 +18,5 @@ setup(
     package_dir={"": "src"},
     packages=["cs50"],
     url="https://github.com/cs50/python-cs50",
-    version="9.4.0"
+    version="9.5.0"
 )
