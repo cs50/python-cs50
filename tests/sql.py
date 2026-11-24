@@ -210,6 +210,27 @@ class SQLiteTests(SQLTests):
         self.db.execute("CREATE TABLE bar(foo_id INTEGER, FOREIGN KEY (foo_id) REFERENCES foo(id))")
         self.assertRaises(ValueError, self.db.execute, "INSERT INTO bar VALUES(50)")
 
+    def test_pragma(self):
+        rows = self.db.execute("PRAGMA journal_mode")
+        self.assertIsInstance(rows, list)
+        self.assertTrue(len(rows) > 0)
+        self.assertIn("journal_mode", rows[0])
+
+        ret = self.db.execute("PRAGMA foreign_keys = ON")
+        self.assertTrue(ret)
+
+        fk_rows = self.db.execute("PRAGMA foreign_keys")
+        self.assertEqual(fk_rows, [{"foreign_keys": 1}])
+
+        table_info = self.db.execute("PRAGMA table_info(cs50)")
+        self.assertIsInstance(table_info, list)
+        col_names = [col["name"] for col in table_info]
+        self.assertIn("id", col_names)
+        self.assertIn("val", col_names)
+
+        comment_pragma = self.db.execute("-- check foreign keys\npragma foreign_keys;")
+        self.assertEqual(comment_pragma, [{"foreign_keys": 1}])
+
     def test_qmark(self):
         self.db.execute("CREATE TABLE foo (firstname STRING, lastname STRING)")
 

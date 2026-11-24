@@ -156,17 +156,34 @@ class SQL(object):
             raise RuntimeError("cannot pass both positional and named parameters")
 
         # Infer command from flattened statement to a single string separated by spaces
-        full_statement = " ".join(
-            str(token)
-            for token in statements[0].tokens
-            if token.ttype
-            in [
-                sqlparse.tokens.Keyword,
-                sqlparse.tokens.Keyword.DDL,
-                sqlparse.tokens.Keyword.DML,
-            ]
+        first_token = next(
+            (
+                t
+                for t in statements[0].flatten()
+                if not t.is_whitespace
+                and t.ttype
+                not in [
+                    sqlparse.tokens.Comment,
+                    sqlparse.tokens.Comment.Single,
+                    sqlparse.tokens.Comment.Multiline,
+                ]
+            ),
+            None,
         )
-        full_statement = full_statement.upper()
+        if first_token and first_token.value.upper() == "PRAGMA":
+            full_statement = "PRAGMA"
+        else:
+            full_statement = " ".join(
+                str(token)
+                for token in statements[0].tokens
+                if token.ttype
+                in [
+                    sqlparse.tokens.Keyword,
+                    sqlparse.tokens.Keyword.DDL,
+                    sqlparse.tokens.Keyword.DML,
+                ]
+            )
+            full_statement = full_statement.upper()
 
         # Set of possible commands
         commands = {
@@ -174,6 +191,7 @@ class SQL(object):
             "CREATE VIEW",
             "DELETE",
             "INSERT",
+            "PRAGMA",
             "SELECT",
             "START",
             "UPDATE",
@@ -383,21 +401,16 @@ class SQL(object):
                     self._autocommit = False
 
                 # Execute statement
-                if self._autocommit:
+                autocommit = self._autocommit and command != "PRAGMA"
+                if autocommit:
                     connection.execute(sqlalchemy.text("BEGIN"))
                 result = connection.execute(sqlalchemy.text(statement))
-                if self._autocommit:
-                    connection.execute(sqlalchemy.text("COMMIT"))
-
-                # Check for end of transaction
-                if command in ["COMMIT", "ROLLBACK", "VACUUM"]:  # cannot VACUUM from within a transaction
-                    self._autocommit = True
 
                 # Return value
                 ret = True
 
-                # If SELECT, return result set as list of dict objects
-                if command == "SELECT":
+                # If SELECT or PRAGMA that returns rows, return result set as list of dict objects
+                if command == "SELECT" or (command == "PRAGMA" and result.returns_rows):
                     # Coerce types
                     rows = [dict(row) for row in result.mappings().all()]
                     for row in rows:
@@ -413,6 +426,13 @@ class SQL(object):
 
                     # Rows to be returned
                     ret = rows
+
+                if autocommit:
+                    connection.execute(sqlalchemy.text("COMMIT"))
+
+                # Check for end of transaction
+                if command in ["COMMIT", "ROLLBACK", "VACUUM"]:  # cannot VACUUM from within a transaction
+                    self._autocommit = True
 
                 # If INSERT, return primary key value for a newly inserted row (or None if none)
                 elif command == "INSERT":
